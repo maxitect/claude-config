@@ -74,22 +74,31 @@ The following Model Context Protocol servers are configured:
 
 - Tailwind CSS class reference and documentation
 - Color palettes, utility classes, and configuration
+- **Key tool**: `convert_css_to_tailwind` - Convert existing CSS to Tailwind classes
 
 **shadcn:** shadcn/ui component system
 
 - Component registry and examples
 - Available as both MCP and CLI (`pnpm dlx shadcn@latest add <component>`)
+- **Key tool**: `get_item_examples_from_registries` - Get full working examples with code
 
 **supabase:** Supabase operations and documentation
 
 - Search Supabase documentation (GraphQL-based)
 - Project management, logs, and security advisors
 - Edge Functions and database operations
+- **Key tools**:
+  - `get_advisors` - Run after schema changes to catch missing RLS policies and security issues
+  - `generate_typescript_types` - Generate types from database schema
+  - `execute_sql` - Run SQL queries directly
 
 **next-devtools:** Next.js development tools
 
 - Next.js documentation and utilities
 - Development workflow helpers
+- **Key tools**:
+  - `nextjs_index` + `nextjs_call` - Inspect running app (routes, errors, components). Use BEFORE making changes to understand current state
+  - `browser_eval` - Test in real browsers (uses Playwright). Use instead of curl for proper validation
 
 **playwright:** Browser automation and testing
 
