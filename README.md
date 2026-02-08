@@ -187,11 +187,23 @@ Project-level CLAUDE.md for team conventions.
 
 ## MCP Servers
 
-**Fetch MCP** - Access online documentation (Next.js, React, Supabase, etc.)
+**github** - Repository search, PRs, issues (backup to gh CLI)
 
-**GitHub MCP** - Repository search, PRs, issues (backup to gh CLI)
+**fs** - Access files outside current project
 
-**Filesystem MCP** - Access files outside current project
+**fetch** - Access online documentation and web resources
+
+**daisyui** - DaisyUI component library documentation
+
+**tailwindcss-mcp-server** - Tailwind CSS utilities and docs
+
+**shadcn** - shadcn/ui component system
+
+**supabase** - Supabase backend and database operations
+
+**next-devtools** - Next.js development tools
+
+**playwright** - Browser automation and testing
 
 ---
 
