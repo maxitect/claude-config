@@ -1,0 +1,47 @@
+{
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  },
+  "model": "sonnet",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.zsh || ~/.claude/hooks/session-start.zsh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat $CLAUDE_PROJECT_DIR/.claude/project-context.md 2>/dev/null || echo '📖 Project context: See CLAUDE.md for conventions'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/typecheck-after-edit.zsh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/lint-after-edit.zsh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
