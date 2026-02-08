@@ -53,6 +53,20 @@ Explore codebase and update `./CLAUDE.md`.
 **When:** After `init-claude` alias
 **Why:** Auto-populates CLAUDE.md with detected frameworks and patterns
 
+### `/zod4`
+
+Zod 4 syntax reference and migration guide.
+
+**When:** Writing Zod schemas
+**Why:** Ensures correct Zod 4 patterns instead of deprecated Zod 3 syntax
+
+### `/conform-validation`
+
+Conform + Zod 4 form validation documentation.
+
+**When:** Building forms with validation
+**Why:** Streamlined type-safe form handling with automatic coercion
+
 ---
 
 ## Agents
@@ -193,7 +207,7 @@ init-claude       # Create CLAUDE.md
 
 **Activate output style:** `/output-style direct`
 
-**Skills:** `/fix`, `/refactor`, `/explore-patterns`, `/init-project`, `/init-claude-md`
+**Skills:** `/fix`, `/refactor`, `/explore-patterns`, `/init-project`, `/init-claude-md`, `/zod4`, `/conform-validation`
 
 **Agents:** Auto-invoke or request manually
 
@@ -215,7 +229,9 @@ init-claude       # Create CLAUDE.md
 │   ├── refactor/SKILL.md
 │   ├── explore-patterns/SKILL.md
 │   ├── init-project/SKILL.md
-│   └── init-claude-md/SKILL.md
+│   ├── init-claude-md/SKILL.md
+│   ├── zod4/SKILL.md
+│   └── conform-validation/SKILL.md
 ├── agents/
 │   ├── pattern-validator.md
 │   ├── build-validator.md
