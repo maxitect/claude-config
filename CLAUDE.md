@@ -106,6 +106,7 @@ The following Model Context Protocol servers are configured:
 - Detects runtime errors, hydration issues, client-side problems
 - Navigate, click, type, fill forms, evaluate JavaScript
 - Screenshots and console message capture
+- **Key tool**: `browser_snapshot` - Capture page state before actions (better than screenshot for interactions)
 
 ## Build & Validation
 
