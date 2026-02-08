@@ -49,7 +49,10 @@ todos/
 .env.development.local
 .env.test.local
 .env.production.local
+
+## Config-specific setting files
 settings-glm.json
+settings.local.json
 
 # Operating System Files
 .DS_Store
