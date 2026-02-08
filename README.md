@@ -220,28 +220,11 @@ init-claude       # Create CLAUDE.md
 ├── CLAUDE.md
 ├── README.md
 ├── settings.json
-├── templates/
-│   ├── CLAUDE.md
-│   └── project-context.md
-├── output-styles/direct.md
-├── skills/
-│   ├── fix/SKILL.md
-│   ├── refactor/SKILL.md
-│   ├── explore-patterns/SKILL.md
-│   ├── init-project/SKILL.md
-│   ├── init-claude-md/SKILL.md
-│   ├── zod4/SKILL.md
-│   └── conform-validation/SKILL.md
-├── agents/
-│   ├── pattern-validator.md
-│   ├── build-validator.md
-│   ├── scope-reviewer.md
-│   ├── simplicity-enforcer.md
-│   └── debugger.md
-└── hooks/
-    ├── session-start.zsh
-    ├── typecheck-after-edit.zsh
-    └── lint-after-edit.zsh
+├── templates/          # Project setup files
+├── output-styles/      # Communication preferences
+├── skills/             # User-invocable workflows
+├── agents/             # Specialised sub-agents
+└── hooks/              # Event-triggered scripts
 ```
 
 ---
