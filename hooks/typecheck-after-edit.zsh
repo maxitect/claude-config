@@ -1,22 +1,19 @@
 #!/usr/bin/env zsh
-set -euo pipefail
 
 # Read JSON input from stdin
-input=$(cat)
-file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null)
+file_path=$(grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
 
 # Only run typecheck for TypeScript files
-if [[ "$file_path" =~ \.(ts|tsx)$ ]]; then
-  if [[ -f package.json ]]; then
-    if command -v pnpm &> /dev/null; then
-      if grep -q '"typecheck"' package.json; then
-        pnpm typecheck 2>&1 | head -20
-      elif command -v tsc &> /dev/null; then
-        npx tsc --noEmit 2>&1 | head -20
-      fi
-    fi
-  fi
+if [[ -n "$file_path" && "$file_path" =~ \.(ts|tsx)$ ]]; then
+  results=$(npx tsc --noEmit 2>&1)
 fi
 
-echo '{"continue": true}'
+# Output to stderr and exit 2 for agent visibility
+if [[ -n "$results" ]]; then
+  echo "🔍 Typecheck results:" >&2
+  echo "$results" >&2
+  echo "" >&2
+  exit 2
+fi
+
 exit 0

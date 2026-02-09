@@ -1,22 +1,28 @@
 #!/usr/bin/env zsh
-set -euo pipefail
 
 # Read JSON input from stdin
-input=$(cat)
-file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null)
+file_path=$(grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
 
-# Only run linter for TypeScript files
-if [[ "$file_path" =~ \.(ts|tsx|js|jsx)$ ]]; then
+# Only run linter for TypeScript/JavaScript files
+if [[ -n "$file_path" && "$file_path" =~ \.(ts|tsx|js|jsx)$ ]]; then
   if [[ -f package.json ]]; then
     if command -v pnpm &> /dev/null; then
       if grep -q '"lint"' package.json; then
-        pnpm lint 2>&1 | head -20
+        results=$(pnpm lint 2>&1 | head -20) || true
       elif command -v eslint &> /dev/null; then
-        npx eslint "$file_path" 2>&1 | head -20
+        results=$(npx eslint "$file_path" 2>&1 | head -20) || true
       fi
     fi
   fi
 fi
 
-echo '{"continue": true}'
+# Output to stderr and exit 2 for agent visibility
+if [[ -n "$results" ]]; then
+  echo "🔍 Lint results:" >&2
+  echo "$results" >&2
+  echo "" >&2
+  exit 2  # Exit 2 + stderr = agent sees this
+fi
+
+# Exit 0 for success (no errors to show)
 exit 0
