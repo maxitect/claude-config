@@ -10,6 +10,9 @@
 __store.db
 history.jsonl
 stats-cache.json
+mcp-needs-auth-cache.json
+/sessions
+/backups
 
 # Project-specific data
 projects/
@@ -26,6 +29,7 @@ plugins/
 # Cache and temporary files
 cache/
 paste-cache/
+.last-cleanup
 
 # Analytics and telemetry
 statsig/
@@ -34,6 +38,9 @@ usage-data/
 
 # Runtime todos
 todos/
+
+# plugins
+.caveman-active
 
 # Local settings override (optional - uncomment if you want to keep settings.local.json private)
 # settings.local.json
