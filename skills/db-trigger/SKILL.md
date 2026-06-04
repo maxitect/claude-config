@@ -192,4 +192,4 @@ SELECT has_function_privilege('anon',          'public.trg_<name>()', 'execute')
 SELECT has_function_privilege('authenticated', 'public.trg_<name>()', 'execute');
 ```
 
-Run `supabase db reset` then check local advisor or run the SQL above in Supabase Studio.
+Do not run any supabase commands to reset or migrate, advise the user to do so and to check local advisor or run the SQL above in Supabase Studio.
