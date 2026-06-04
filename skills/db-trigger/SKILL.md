@@ -148,38 +148,29 @@ CREATE POLICY "Owner can update" ON public.posts FOR UPDATE TO authenticated
 ## 8. Full migration example
 
 ```sql
--- Stamp audit columns when a member is added to an organization.
-
-CREATE OR REPLACE FUNCTION public.trg_member_added()
+CREATE OR REPLACE FUNCTION public.trg_item_added()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
-  UPDATE public.organization_invites
-  SET status = 'accepted', accepted_at = now()
-  WHERE organization_id = NEW.organization_id
-    AND invitee_user_id  = NEW.user_id
+  UPDATE public.related_records
+  SET status = 'processed', processed_at = now()
+  WHERE parent_id = NEW.parent_id
     AND status = 'pending';
 
-  UPDATE public.organization_join_requests
-  SET status = 'approved', approved_at = now(), reviewer_id = auth.uid()
-  WHERE organization_id = NEW.organization_id
-    AND user_id = NEW.user_id
-    AND status = 'pending';
-
-  RETURN NEW;
+  RETURN NULL;
 END;
 $$;
 
-CREATE TRIGGER trg_member_added
-  AFTER INSERT ON public.organization_members
+CREATE TRIGGER trg_item_added
+  AFTER INSERT ON public.items
   FOR EACH ROW
-  EXECUTE FUNCTION public.trg_member_added();
+  EXECUTE FUNCTION public.trg_item_added();
 
-REVOKE EXECUTE ON FUNCTION public.trg_member_added() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.trg_member_added() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trg_item_added() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.trg_item_added() FROM anon, authenticated;
 ```
 
 ---
