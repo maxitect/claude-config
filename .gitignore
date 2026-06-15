@@ -30,6 +30,7 @@ plugins/
 cache/
 paste-cache/
 .last-cleanup
+.last-update-result.json
 
 # Analytics and telemetry
 statsig/
@@ -60,6 +61,8 @@ todos/
 ## Config-specific setting files
 settings-glm.json
 settings.local.json
+policy-limits.json
+remote-settings.json
 
 # Operating System Files
 .DS_Store
