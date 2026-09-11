@@ -26,7 +26,7 @@ Split staged/pending changes into multiple commits by concern — never one gian
 ## Never
 
 - Multiline messages or bodies
-- "Co-Authored-By: Claude" or any AI attribution
+- "Co-Authored-By: Claude" or any AI attribution, including "Claude session:" links
 - "This commit...", "I", "we"
 
 ## Examples
