@@ -121,6 +121,10 @@ temp/
 .LSOverride
 Icon?
 
+# Plugin data
+skills/gh-stack/
+skills/synced/
+
 # ===================================
 # Optional: Uncomment as needed
 # ===================================
