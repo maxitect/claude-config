@@ -1,100 +1,85 @@
 ---
 name: pr-review
-description: Perform thorough, structured code review on a PR. Detects stack/conventions from the codebase, checks linked issues for acceptance criteria, then reviews the diff with severity-graded findings.
-compatibility:
-  tools:
-    - bash
-    - read
-    - edit
+description: Thorough, structured code review of the current branch's PR (or of the branch diff when no PR exists). Derives PR, base branch, stack and conventions from the repo, resolves the ticket for acceptance criteria, and probes every finding before reporting it.
+argument-hint: "[tracker: monday|github|jira|linear|none]"
+allowed-tools: Bash(${CLAUDE_SKILL_DIR}/render.sh *), Bash(gh*), Bash(git*), Bash(cat*), Bash(grep*), Bash(ls*), Bash(find*), Bash(curl*), Bash(jq*), Bash(pnpm*), Bash(npm*), Bash(npx*), Bash(yarn*), Bash(bun*), Bash(bunx*), Bash(python*), Bash(pytest*), Bash(mypy*), Bash(ruff*), Bash(poetry*), Bash(uv*), Bash(go*), Bash(cargo*), Bash(docker*), Bash(psql*), Bash(mongosh*), Bash(supabase*), Read, Grep, Glob, mcp__claude_ai_monday_com, mcp__claude_ai_Atlassian_Rovo, mcp__claude_ai_Google_Drive, mcp__playwright, mcp__supabase__get_advisors, mcp__supabase__execute_sql
 ---
 
-# Code Review Skill
+# Code Review
 
-Structured code review. Adapts to whatever stack is in the repo. Reviews only changes in the PR diff — never touches unrelated code.
-
----
-
-## 0. Identify the PR
-
-```bash
-git branch --show-current
-gh pr view --json number,title,url,body,baseRefName,headRefName,state
-```
-
-If no PR found, tell user and stop.
-
-Store: `PR_NUMBER`, `BASE_BRANCH`, `HEAD_BRANCH`.
+Review only what the diff changes — never touch unrelated code. Every finding is probed before it ships (§7);
+an unprobed finding is a hypothesis and goes out labelled as one.
 
 ---
 
-## 1. Detect Stack & Conventions
+## 1. Context
 
-Before reviewing, read the codebase to understand what patterns to enforce.
+Gathered already — the PR or its absence, the diff scope, conventions, tracker, and the checklists for this
+stack. Take it as given; re-running detection wastes a turn and can contradict it.
 
-```bash
-# Check for CLAUDE.md (project conventions)
-cat CLAUDE.md 2>/dev/null || cat .claude/CLAUDE.md 2>/dev/null
+!`${CLAUDE_SKILL_DIR}/render.sh $ARGUMENTS`
 
-# Detect package manager
-ls package-lock.json yarn.lock pnpm-lock.yaml bun.lockb 2>/dev/null | head -1
+Working rules from that block:
 
-# Detect framework / language
-cat package.json 2>/dev/null | head -60
-ls tsconfig.json pyproject.toml go.mod Cargo.toml mix.exs 2>/dev/null
-
-# Detect test framework
-grep -r "jest\|vitest\|pytest\|rspec\|go test" package.json pyproject.toml go.mod 2>/dev/null | head -5
-```
-
-From this, derive:
-
-- Language + runtime
-- Framework (Next.js, Express, Django, Rails, Go stdlib, etc.)
-- Package manager
-- TypeScript strictness (if applicable)
-- Test framework
-- Any project-specific conventions from CLAUDE.md
+- **Read every convention file listed.** They outrank this skill wherever they disagree.
+- **Use the exact script/task names printed.** A probe invented from habit (`pnpm typecheck` where the repo
+  says `check`) fails for the wrong reason and proves nothing.
+- The stack fragments extend the §5 checklist and the §7 probe table. They are checklist, not background reading.
+  Anything not rendered isn't this repo's stack — don't review against it.
+- The ticket section is the lookup path for §2. Follow it rather than assuming GitHub issues.
+- The PR description, where one was rendered, is the author's stated intent. Where it conflicts with the ticket
+  (§2), the ticket defines the requirements and the description explains the deviation.
+- If a specific PR was asked for and did not resolve, stop and say so. The current branch is not a substitute
+  for the diff you were asked about.
+- State in the report header (§8) which of the two the block rendered: a PR, or a branch with none. A review of
+  a branch with no PR must never read as though a PR was reviewed — there was no description to check the work
+  against and no reviewer thread to defer to.
+- If the rendered stack is plainly wrong for this repo, say so before reviewing.
 
 ---
 
-## 2. Check Linked Issues
+## 2. Resolve the Ticket
 
-```bash
-# Get PR body to find closing keywords
-gh pr view $PR_NUMBER --json body --jq '.body'
-```
+Do this **before** reading the diff. Reviewing without the intent means grading the code against your own guess
+at the requirements.
 
-Scan body for closing keywords: `closes`, `fixes`, `resolves` (case-insensitive), followed by `#N` or a full GitHub issue URL.
+§1 rendered the lookup path for this repo's tracker — follow it. If it rendered no tracker, say so in the output
+and work from the PR description alone.
 
-For each linked issue:
+With no PR, the body lookup path doesn't apply but the branch-name one still does — most trackers put the id
+there. Only when the branch carries no id is there nothing to resolve.
 
-```bash
-gh issue view $ISSUE_NUMBER --json title,body,labels,milestone
-```
+From the ticket (and any doc it links) extract:
 
-Extract:
+- **Goal / problem statement** — what this PR is meant to solve.
+- **Acceptance criteria** — checklist items, "should", "must", "expected behaviour". These are what "done" means.
+- **Out of scope** notes — explicit non-goals.
 
-- **Goal / problem statement**
-- **Acceptance criteria** (look for checklist items, "should", "must", "expected behaviour" sections)
-- **Out of scope** notes
+Build the **Issue Checklist**: the requirements the diff must satisfy. Cross-check it in §5 and report it in §8.
 
-Build an **Issue Checklist** — a list of requirements the PR must satisfy. You will verify these during review.
+Anything in the diff that no criterion covers is scope creep — flag it, but check the PR description first, which
+often justifies it.
+
+If the ticket couldn't be read (no id, tracker unreachable, no access), say which and mark the Issue Coverage
+table unverified rather than inferring criteria from the code. Code cannot evidence its own requirements.
 
 ---
 
 ## 3. Get the Diff
 
-```bash
-# Full diff against base branch
-git diff origin/$BASE_BRANCH...HEAD
+§1 rendered the base ref, the diffstat and the changed-file list. Read the diff itself, using the exact range
+§1 printed:
 
-# Files changed (for orientation)
-git diff --name-status origin/$BASE_BRANCH...HEAD
+```bash
+git diff <base-ref>...HEAD
 ```
 
-Classify changed files by type (page, route handler, component, hook, model, migration, test, config, etc.).
+Classify the changed files by type (page, route handler, component, hook, model, migration, test, config, …).
 
-For large PRs (>20 files), group by feature area and review group by group.
+Large PR (>20 files) → group by feature area and review group by group, so no group gets skimmed at the end.
+
+If the rendered file list looks stale or empty, fetch the base ref and re-derive before reviewing — a diff
+against a stale base invents findings that were fixed upstream.
 
 ---
 
@@ -106,7 +91,7 @@ Read every changed file **twice** — once for intent, once for issues.
 cat src/<path/to/file>
 ```
 
-Never skim. Never review only the diff lines — understand surrounding context.
+Never skim. Never review diff lines alone — understand surrounding context.
 
 ### Severity Classification
 
@@ -118,106 +103,166 @@ Never skim. Never review only the diff lines — understand surrounding context.
 
 ## 5. Review Checklist
 
-Apply these checks universally. Skip sections not applicable to the stack.
+Apply universally. Skip sections not applicable to stack.
 
 ### Issue / Acceptance Criteria Coverage
 
-- [ ] For each item in the Issue Checklist (§2): is it implemented?
+- [ ] Each Issue Checklist item (§2): implemented?
   - ✅ Implemented correctly
   - ⚠️ Partially implemented / unclear
   - ❌ Not implemented / missing
 
-Flag any acceptance criteria not met as 🔴 Critical.
+Unmet acceptance criteria → 🔴 Critical.
 
 ### Logic & Correctness
 
-- [ ] Does the changed code do what it claims to do?
-- [ ] Are edge cases handled (empty input, null/undefined, zero, large input)?
-- [ ] Are off-by-one errors possible in loops or array indexing?
-- [ ] Are async operations awaited where they must be?
-- [ ] Are promises left floating (fire-and-forget where result matters)?
-- [ ] Are race conditions possible in concurrent operations?
+- [ ] Changed code does what it claims?
+- [ ] Edge cases handled (empty input, null/undefined, zero, large input)?
+- [ ] Off-by-one errors possible in loops/array indexing?
+- [ ] Async operations awaited where must be?
+- [ ] Promises left floating (fire-and-forget where result matters)?
+- [ ] Race conditions possible in concurrent operations?
 
 ### Security
 
-- [ ] Is user input validated and sanitised before use?
-- [ ] Are SQL queries parameterised (no string interpolation into queries)?
-- [ ] Is authentication checked before accessing protected resources?
-- [ ] Is authorisation checked (user owns the resource, not just logged in)?
-- [ ] Are secrets / API keys absent from source code and client-facing bundles?
-- [ ] Is `dangerouslySetInnerHTML` / `eval` / `exec` used? If so, is input sanitised?
-- [ ] Are file uploads validated for type and size before processing?
+- [ ] User input validated/sanitised before use?
+- [ ] SQL queries parameterised (no string interpolation)?
+- [ ] Auth checked before accessing protected resources?
+- [ ] Authorisation checked (user owns resource, not just logged in)?
+- [ ] Secrets / API keys absent from source, client bundles?
+- [ ] `dangerouslySetInnerHTML` / `eval` / `exec` used? Input sanitised?
+- [ ] File uploads validated for type/size before processing?
 
 ### Error Handling
 
-- [ ] Are all async operations wrapped in try/catch (or equivalent)?
-- [ ] Are errors surfaced to the user appropriately — not swallowed silently?
-- [ ] Are error messages safe to show users (no stack traces, no internal paths)?
-- [ ] Are expected error cases (404, validation fail) distinguished from unexpected ones (500)?
+- [ ] Async ops wrapped in try/catch (or equivalent)?
+- [ ] Errors surfaced to user appropriately — not swallowed silently?
+- [ ] Error messages safe to show users (no stack traces, no internal paths)?
+- [ ] Expected error cases (404, validation fail) distinguished from unexpected (500)?
 
 ### Types & Contracts (TypeScript / typed languages)
 
-- [ ] Are `any` / `unknown` / type assertions (`as X`) used? Each needs justification.
-- [ ] Are function signatures typed — parameters and return values?
-- [ ] Are nullability assumptions safe (no unchecked `!` non-null assertions)?
-- [ ] Do types derive from authoritative sources (DB schema, API response, Zod schema) rather than hand-rolled shapes that can drift?
+- [ ] `any` / `unknown` / type assertions (`as X`) used? Each needs justification.
+- [ ] Function signatures typed — params and return values?
+- [ ] Nullability assumptions safe (no unchecked `!` non-null assertions)?
+- [ ] Types derive from authoritative sources (DB schema, API response, Zod schema) — not hand-rolled shapes that drift?
 
 ### State & Data Flow
 
-- [ ] Is server-fetched data being duplicated into local state unnecessarily?
-- [ ] Is global state used only for genuinely global concerns?
-- [ ] Are derived values computed — not stored and kept in sync manually?
-- [ ] Are mutations invalidating / refreshing dependent queries or UI state?
+- [ ] Server-fetched data duplicated into local state unnecessarily?
+- [ ] Global state used only for genuinely global concerns?
+- [ ] Derived values computed — not stored/synced manually?
+- [ ] Mutations invalidate/refresh dependent queries or UI state?
 
 ### Performance
 
-- [ ] Are N+1 queries possible (query inside a loop)?
-- [ ] Are large collections paginated — not fetched entirely?
-- [ ] Are expensive computations memoised where appropriate?
-- [ ] Are large dependencies / libraries lazy-loaded where possible?
-- [ ] Are images / assets optimised (correct format, explicit dimensions)?
+- [ ] N+1 queries possible (query inside loop)?
+- [ ] Large collections paginated — not fetched entirely?
+- [ ] Expensive computations memoised where appropriate?
+- [ ] Large dependencies/libraries lazy-loaded where possible?
+- [ ] Images/assets optimised (correct format, explicit dimensions)?
 
 ### Code Quality
 
-- [ ] Is code self-documenting? Do names explain intent?
-- [ ] Are there magic strings / numbers that should be named constants?
-- [ ] Are `console.log` / debug statements present that shouldn't reach production?
-- [ ] Are dead imports, unused variables, or commented-out code present?
-- [ ] Is there duplicated logic that should be extracted?
-- [ ] Are functions / methods too long (>50 lines is a smell, >100 is a flag)?
-- [ ] Is business logic mixed into UI components or view templates?
+- [ ] Code self-documenting? Names explain intent?
+- [ ] Magic strings/numbers that should be named constants?
+- [ ] `console.log`/debug statements present that shouldn't reach production?
+- [ ] Dead imports, unused vars, commented-out code present?
+- [ ] Duplicated logic that should be extracted?
+- [ ] Functions/methods too long (>50 lines smell, >100 flag)?
+- [ ] Business logic mixed into UI components/view templates?
 
 ### Conventions (from CLAUDE.md and detected stack)
 
-Apply any project-specific rules detected in §1. Flag violations as 🟡 Warning.
+Apply the convention files and every stack-fragment checklist item rendered in §1.
+Violations → 🟡 Warning unless the fragment grades them higher.
 
 ---
 
 ## 6. Anti-Pattern Radar
 
-Watch for signs of vibe coding / over-engineering regardless of stack:
+Vibe-coding / over-engineering signs, regardless of stack:
 
-| Pattern                          | What to look for                                        |
-| -------------------------------- | ------------------------------------------------------- |
-| Unnecessary fallbacks            | Default values that mask real errors                    |
-| Over-complicated data processing | Multi-step transforms that could be a single expression |
-| Non-SOLID code                   | God functions, mixed concerns, feature envy             |
-| Defensive over-engineering       | Try/catch around code that can't throw                  |
-| Stale TODO/FIXME                 | Comments referencing issues that should be resolved     |
-| Premature abstraction            | Generic helper written for one use case                 |
-| Shadowed variables               | `const x` in inner scope hiding outer `x`               |
+| Pattern                          | What to look for                                      |
+| -------------------------------- | ----------------------------------------------------- |
+| Unnecessary fallbacks            | Default values masking real errors                    |
+| Over-complicated data processing | Multi-step transforms that could be single expression |
+| Non-SOLID code                   | God functions, mixed concerns, feature envy           |
+| Defensive over-engineering       | Try/catch around code that can't throw                |
+| Stale TODO/FIXME                 | Comments referencing issues that should be resolved   |
+| Premature abstraction            | Generic helper written for one use case               |
+| Shadowed variables               | `const x` in inner scope hiding outer `x`             |
 
 ---
 
-## 7. Output Format
+## 7. Verify Every Finding
 
-Prioritise by severity, not by file order.
+A finding you have not reproduced is a hypothesis. A review pass produces genuine catches and confident
+fabrications in the same breath, and on the page they read identically — the only thing separating them is a
+command with output. Run one for every finding the stack can settle.
+
+### Use the environment if it's already up
+
+```bash
+# Is a dev server / app already running? (port from package.json, Procfile, compose file)
+curl -sf -o /dev/null http://localhost:3000 && echo up || echo down
+
+# Is a local DB / service stack up?
+docker compose ps 2>/dev/null | head -5
+```
+
+- App down but startable cheaply → start it; a probe beats an argument.
+- Nothing runnable (no deps installed, no DB, no creds) → review statically, findings ship labelled UNVERIFIED.
+- Don't settle branch behaviour against a shared staging/production environment — it doesn't have this branch yet.
+
+### Prove the finding
+
+Pick the cheapest probe capable of returning "no". §1 carries this repo's real script names and stack-specific
+probe commands — prefer those over the generic forms below:
+
+| Claim                                   | Probe                                                                                                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Type or inference error                 | project typecheck — `tsc --noEmit`, `mypy`, `go build ./...`, `cargo check`                                                                                    |
+| Lint or convention violation            | run the linter on that file (`eslint <file>`, `ruff check <file>`) — run the rule, don't assert it fires                                                       |
+| "X doesn't exist" / "wrong import path" | grep the definition or barrel export before claiming it                                                                                                        |
+| Logic bug in a pure function            | execute it — existing test, `node -e`, `python -c`, REPL — with the input that should break it                                                                 |
+| Broken or missing test coverage         | run the suite (or the single test) and quote the decisive line                                                                                                 |
+| API route / handler behaviour           | `curl -i` the running server with a real session; assert status code and body shape                                                                            |
+| DB query, migration, constraint, policy | apply locally, then write the row that should trip it and show what actually happened                                                                          |
+| Rendering, hydration, client state      | Playwright MCP — walk the real flow, `browser_snapshot`, read `browser_console_messages`. A console error is evidence; "this looks like it would break" is not |
+| Build or bundle claim                   | run the build; quote the failing line                                                                                                                          |
+
+Label every finding before writing anything up:
+
+- **CONFIRMED** — probe output in hand.
+- **REFUTED** — the probe disagreed with you. Delete it. Don't demote it to a 🟢, don't reword it as a question.
+- **UNVERIFIED** — no probe can settle it (design opinion, readability, scope creep vs the issue) or the stack
+  wasn't runnable. Ships, but labelled, with the reason.
+
+A pass that probed its findings and refuted none of them almost certainly didn't probe them.
+
+### Prove the fix
+
+Same discipline on the remedy:
+
+1. Capture the failing probe output **first**. Red before green, or you can't tell a fix from a coincidence.
+2. Apply the fix, re-run that exact probe, capture the passing output.
+3. Regression sweep: typecheck, lint, test suite; re-run probes for every other finding touching the same file;
+   for UI, re-walk the other flows using the changed component.
+4. If step 2 or 3 fails, the fix is wrong. Iterate from 1 with a different fix.
+
+---
+
+## 8. Output Format
+
+Prioritise by severity, not file order.
 
 ```
-## Code Review: [PR title] (#N)
+## Code Review: [PR title] (#N) — or [branch name] (no PR) when §1 rendered none
 
 ### Issue Coverage
 > Linked issues: #X — [title]
+> No PR: "No PR — intent taken from the ticket and branch commits."
 
 | Criterion | Status |
 |---|---|
@@ -226,18 +271,17 @@ Prioritise by severity, not by file order.
 
 ### Summary
 One paragraph: overall quality, biggest concerns, what's done well.
+Verification: N findings probed, M confirmed, K refuted and dropped, J unverified.
 
 ### 🔴 Critical Issues
 1. **[Short title]** (`src/path/to/file.ts`, line N)
    Problem. Why it matters. Concrete fix.
-```
+   Evidence: `<command run>` → `<decisive line of output>`  — or `UNVERIFIED — <reason>`
 
 // Before
 ...
 // After
 ...
-
-```
 
 ### 🟡 Warnings
 ...same format...
@@ -251,21 +295,24 @@ Callouts of good patterns to reinforce.
 
 Rules:
 
-- Lead with the most severe issue, not the first file
-- Every finding gets a concrete fix — not just a description
-- For large fixes, offer: _"Want me to apply this?"_
-- Cap at ~10 items per category for large PRs
-- If a 🔴 maps to an unmet acceptance criterion, say so explicitly
+- Lead with most severe issue, not first file
+- Every 🔴 and 🟡 carries an `Evidence:` line — the command run and the decisive line of its output, or
+  `UNVERIFIED — <reason>` (§7). Never no line at all
+- Say how many findings were refuted by probing; it tells the author how much to trust the rest
+- Every finding gets concrete fix — not just description
+- Large fixes → offer: _"Want me to apply this?"_
+- Cap ~10 items per category for large PRs
+- 🔴 mapping to unmet acceptance criterion → say so explicitly
 
 ---
 
-## 8. After the Review
+## 9. After the Review
 
 1. **Issue coverage verdict**: all criteria met / partially met / missing items
-2. **Offer to apply fixes** for 🔴 and 🟡 items: _"Want me to apply any of these?"_
-3. **Offer a deeper dive** if a category had 3+ issues in same area
-4. **Check related files** if tight coupling spotted
-5. **Run type check** after any TypeScript changes: `pnpm tsc --noEmit` (or equivalent)
-6. **Run lint** after changes: `pnpm lint` (or equivalent)
+2. **Verification verdict**: how many findings were probed, and what the unverified ones are waiting on
+3. **Offer to apply fixes** for 🔴 and 🟡 items: _"Want me to apply any of these?"_
+4. **Offer deeper dive** if category had 3+ issues in same area
+5. **Check related files** if tight coupling spotted
 
-Apply fixes one at a time, confirm each before moving to the next.
+Apply fixes one at a time, each following "Prove the fix" (§7): red probe, fix, green probe, regression sweep.
+Confirm each before moving to the next.
