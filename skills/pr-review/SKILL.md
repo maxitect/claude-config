@@ -26,7 +26,8 @@ Working rules from that block:
   says `check`) fails for the wrong reason and proves nothing.
 - The stack fragments extend the §5 checklist and the §7 probe table. They are checklist, not background reading.
   Anything not rendered isn't this repo's stack — don't review against it.
-- The ticket section is the lookup path for §2. Follow it rather than assuming GitHub issues.
+- The ticket section is §2's input: either the ticket itself, or the path to it. Follow what it rendered
+  rather than assuming GitHub issues.
 - The PR description, where one was rendered, is the author's stated intent. Where it conflicts with the ticket
   (§2), the ticket defines the requirements and the description explains the deviation.
 - If a specific PR was asked for and did not resolve, stop and say so. The current branch is not a substitute
@@ -43,7 +44,9 @@ Working rules from that block:
 Do this **before** reading the diff. Reviewing without the intent means grading the code against your own guess
 at the requirements.
 
-§1 rendered the lookup path for this repo's tracker — follow it. If it rendered no tracker, say so in the output
+§1 either rendered the ticket itself — GitHub issues are fetched with the PR — or the lookup path for the
+tracker this repo uses. A rendered ticket is already read; don't fetch it again. A lookup path means the ticket
+lives somewhere `gh` can't reach: follow it now, before the diff. If §1 rendered neither, say so in the output
 and work from the PR description alone.
 
 With no PR, the body lookup path doesn't apply but the branch-name one still does — most trackers put the id
@@ -218,7 +221,8 @@ docker compose ps 2>/dev/null | head -5
 ### Prove the finding
 
 Pick the cheapest probe capable of returning "no". §1 carries this repo's real script names and stack-specific
-probe commands — prefer those over the generic forms below:
+probe commands — prefer those over the generic forms below. Anything §1 already ran is CONFIRMED
+evidence; quote it rather than re-running it:
 
 | Claim                                   | Probe                                                                                                                                                          |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,27 +1,13 @@
-Tickets are GitHub issues linked from the PR body.
+Tickets are GitHub issues, and none was fetched: the PR closes no issue and the branch carries no issue number.
 
-**Find the ticket**
-
-```bash
-gh pr view $PR_NUMBER --json body --jq '.body'
-```
-
-Scan the body for closing keywords — `closes`, `fixes`, `resolves` (case-insensitive) — followed by `#N` or a
-full issue URL. `gh` also parses them for you:
+Before falling back, check whether the link is there but unparsed — `gh` only parses closing keywords
+(`closes`, `fixes`, `resolves`) followed by `#N` or a full issue URL. A bare `#N` or a "see issue 412" in the
+body is a link a human would follow:
 
 ```bash
-gh pr view $PR_NUMBER --json closingIssuesReferences --jq '.closingIssuesReferences[]'
+gh pr view --json body --jq '.body' | grep -oE '#[0-9]+|issues/[0-9]+'
+gh issue view <number> --json title,body,labels,state,comments
 ```
 
-A branch named `<type>/<number>-<description>` (`fix/482-carousel-blink`) is a second lookup path when the body
-has no closing keyword.
-
-**Read it**
-
-```bash
-gh issue view $ISSUE_NUMBER --json title,body,labels,milestone,comments
-```
-
-Read the comments too — acceptance criteria get amended there more often than in the body.
-
-If the PR links no issue and the branch carries no number, note the absence and work from the PR description.
+Still nothing → work from the PR description, and say plainly in the report that no linked issue defined the
+acceptance criteria. Don't reverse-engineer criteria from the diff; that grades the code against itself.

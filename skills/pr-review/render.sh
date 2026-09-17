@@ -15,26 +15,20 @@ FRAG="$DIR/fragments"
 STACK=""
 TICKET=""
 TARGET=""
+CHANGED_FILE="$(mktemp -t prreview)"
+trap 'rm -f "$CHANGED_FILE"' EXIT
 
 # gh can stall on a bad network or an auth prompt; a stalled injection kills the whole
 # skill invocation, so every gh call is capped.
-gh_t() { perl -e 'alarm shift; exec @ARGV' 25 gh "$@" 2>/dev/null; }
+. "$DIR/_cap.sh"
+gh_t() { cap 25 gh "$@" 2>/dev/null; }
 
-# Extract a field from gh JSON. Prefers jq, falls back to python3 (both handle the same filter
-# subset used here: .field, .a[].b, join, and the isDraft conditional).
+# Extract a field from gh JSON: jq when present, else the ghjson.py fallback beside this script.
 gh_jq() {
   if command -v jq >/dev/null 2>&1; then
     jq -r "$1" 2>/dev/null
   else
-    python3 - "$1" <<'PY' 2>/dev/null
-import json,sys,re
-f=sys.argv[1]; d=json.load(sys.stdin)
-if f=='if .isDraft then " (draft)" else "" end': print(" (draft)" if d.get("isDraft") else "",end="")
-elif f=='[.labels[].name] | join(", ")': print(", ".join(l["name"] for l in d.get("labels") or []),end="")
-elif f.startswith('.closingIssuesReferences[]'):
-    print("\n".join("#%s %s"%(i["number"],i["title"]) for i in d.get("closingIssuesReferences") or []),end="")
-else: print(d.get(f[1:]) or "",end="")
-PY
+    python3 "$DIR/ghjson.py" "$1" 2>/dev/null
   fi
 }
 
@@ -171,7 +165,7 @@ if [ -n "$PR_JSON" ]; then
   echo
   printf '%s' "$PR_JSON" | gh_jq '.body' | sed 's/^/  | /' | head -200
   echo
-  LINKED="$(printf '%s' "$PR_JSON" | gh_jq '.closingIssuesReferences[] | "#\(.number) \(.title)"' 2>/dev/null)"
+  LINKED="$(printf '%s' "$PR_JSON" | gh_jq '.closingIssuesReferences[] | "#\(.number) \(.url)"' 2>/dev/null)"
   if [ -n "$LINKED" ]; then
     echo "Closing issue references (gh-parsed):"
     printf '%s\n' "$LINKED" | sed 's/^/  /'
@@ -249,6 +243,7 @@ if [ -n "$BASE_REF" ] && [ -n "$HEAD_BRANCH" ]; then
   fi
 
   FILES="$(git diff --name-status "$BASE_REF...HEAD" 2>/dev/null)"
+  printf '%s\n' "$FILES" > "$CHANGED_FILE"
   COUNT="$(printf '%s\n' "$FILES" | grep -c . )"
   if [ -n "$FILES" ]; then
     echo "Changed files ($COUNT):"
@@ -263,6 +258,47 @@ if [ "$TICKET" = "skip" ]; then
   echo
   echo "No tracker lookup. Take intent and acceptance criteria from the PR description alone, and say so in §2."
   echo
+elif [ "$TICKET" = "ticket-github" ]; then
+  ISSUE_NUMS=""
+  [ -n "$PR_JSON" ] && ISSUE_NUMS="$(printf '%s' "$PR_JSON" | gh_jq '.closingIssuesReferences[] | "\(.repository.owner.login)/\(.repository.name)#\(.number)"')"
+  if [ -z "$ISSUE_NUMS" ] && [ -n "$HEAD_BRANCH" ]; then
+    ISSUE_NUMS="$(printf '%s' "$HEAD_BRANCH" | grep -oE '(^|/)[0-9]+(-|$)' | grep -oE '[0-9]+' | head -1)"
+  fi
+
+  if [ -n "$ISSUE_NUMS" ]; then
+    echo "### Ticket: GitHub issue(s)"
+    echo
+    echo "Fetched below — the acceptance criteria are here, don't re-fetch them."
+    echo
+    for ref in $(printf '%s\n' "$ISSUE_NUMS" | head -3); do
+      n="${ref##*#}"
+      REPO="${ref%#*}"
+      if [ "$REPO" = "$ref" ] || [ -z "$REPO" ]; then
+        set -- "$n"
+      else
+        set -- "$n" -R "$REPO"
+      fi
+      ISSUE="$(gh_t issue view "$@" --json number,title,state,labels,body,comments --jq '
+        "#\(.number) \(.title)  ·  \(.state)",
+        (if (.labels|length) > 0 then "labels: " + ([.labels[].name] | join(", ")) else empty end),
+        "",
+        .body,
+        (if (.comments|length) > 0 then "", "--- comments (\(.comments|length)) ---" else empty end),
+        (.comments[-5:][] | "[\(.author.login)] \(.body)")
+      ')"
+      if [ -n "$ISSUE" ]; then
+        printf '%s\n' "$ISSUE" | head -200 | sed 's/^/  | /'
+      else
+        echo "  | $ref — could not be read (no access, or the issue was deleted)."
+      fi
+      echo
+    done
+  else
+    echo "### Ticket source ($TICKET_MODE): github"
+    echo
+    cat "$FRAG/ticket-github.md"
+    echo
+  fi
 elif [ -n "$TICKET" ]; then
   echo "### Ticket source ($TICKET_MODE): ${TICKET#ticket-}"
   echo
@@ -296,5 +332,9 @@ for f in $PICKED; do
   cat "$FRAG/$f.md"
   echo
 done
+
+case " $STACK " in
+  *" db-supabase "*) "$DIR/db-check.sh" "$CHANGED_FILE" ;;
+esac
 
 exit 0
