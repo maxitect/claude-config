@@ -74,7 +74,7 @@ table unverified rather than inferring criteria from the code. Code cannot evide
 §1 printed:
 
 ```bash
-git diff <base-ref>...HEAD
+git diff <base-ref>...<head-ref>   # the exact range §1 printed
 ```
 
 Classify the changed files by type (page, route handler, component, hook, model, migration, test, config, …).
