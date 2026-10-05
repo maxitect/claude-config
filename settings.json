@@ -16,7 +16,12 @@
     "superpowers@claude-plugins-official": false,
     "figma@claude-plugins-official": true,
     "caveman@caveman": true,
-    "claude-mem@thedotmack": true
+    "claude-mem@thedotmack": true,
+    "playwright@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "i-have-adhd@i-have-adhd": true,
+    "vercel@anthropic-plugin-directory": true,
+    "neon@anthropic-plugin-directory": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
@@ -30,8 +35,15 @@
         "source": "github",
         "repo": "thedotmack/claude-mem"
       }
+    },
+    "i-have-adhd": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/ayghri/i-have-adhd.git"
+      }
     }
   },
+  "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipAutoPermissionPrompt": true
 }
