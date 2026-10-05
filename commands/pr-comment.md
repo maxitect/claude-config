@@ -20,7 +20,7 @@ gh repo view --json nameWithOwner -q .nameWithOwner
 gh pr diff <number> --patch > /tmp/pr-<number>.diff
 ```
 
-Line comments can only anchor to diff lines (added → `RIGHT`, removed → `LEFT`); whole-file findings anchor to the **file itself** (§3.4). Findings on files the PR doesn't touch go in the summary body as `path:line` prose (_"realise this isn't edited in this PR but…"_). No PR on this branch → stop and say so.
+Line comments can only anchor to diff lines (added → `RIGHT`, removed → `LEFT`); whole-file findings anchor to the **file itself** (§3.4). Findings on files the PR doesn't touch go in the summary body as `path:line` prose (_"realise this isn't edited in this PR but…"_), each still starting with its 🟢/🟡/🔴 dot from §2 so the severity reads at a glance. No PR on this branch → stop and say so.
 
 ## 2. The voice
 
@@ -55,13 +55,20 @@ Every comment's prose starts with its dot (for suggestion-block comments, on the
 
 ### Summary body
 
-A few sentences: overall take + headline points + non-inlineable findings as `path:line` prose.
+A few sentences: overall take + headline points + non-inlineable findings as `path:line` prose. Every finding in the body, including ones on files the PR doesn't touch, carries its 🟢/🟡/🔴 dot like an inline comment.
 
 - **Never report process.** No _"lint/tests/build pass"_, no _"checked against the acceptance criteria"_ - CI shows the checks; a missed AC is a finding.
 - **No "Claude checked / Claude said" formulas.** Own the points. A self-aware Claude joke very rarely, as a joke - never boilerplate.
 - Praise one line max (_"nice, looks solid"_).
 - Body suggestions follow the same rules: terse, `path:line`, one reason, no justifying padding.
-- Frontend PR with no images in the description (`gh pr view <n> --json body -q .body`, look for `![` / `<img`) → add _"also this PR should have screenshots"_. Skip for backend-only PRs.
+- PR that changes what the UI looks like or how it behaves, with no images in the description (`gh pr view <n> --json body -q .body`, look for `![` / `<img`) → end the summary body with this GitHub alert, exactly (two lines, `>` on each):
+
+  ```
+  > [!NOTE]
+  > this PR should have screenshots
+  ```
+
+  Only when the PR materially alters the UI. Skip for backend-only PRs, and for PRs that touch frontend files but only change performance, structure or quality of life (refactors, type fixes, memoisation, renames) with no visible difference.
 
 ## 3. Shape each comment
 
