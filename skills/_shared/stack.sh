@@ -16,8 +16,9 @@ STACK_MODE=""
 TICKET_MODE=""
 BASE_BRANCH=""
 BASE_REF=""
-HEAD_BRANCH="$(git branch --show-current 2>/dev/null)"
-HEAD_REF="$HEAD_BRANCH"   # what the diff is taken against; a caller targeting another PR overrides it
+HEAD_BRANCH="${PR_HEAD_BRANCH:-$(git branch --show-current 2>/dev/null)}"
+HEAD_REF="${PR_HEAD_BRANCH:+HEAD}"   # what the diff is taken against; a caller targeting another PR overrides it
+HEAD_REF="${HEAD_REF:-$HEAD_BRANCH}"  # PR_HEAD_BRANCH: a detached checkout of that PR's head (pr-sweep worktrees)
 CHANGED_FILE="$(mktemp -t prskill)"
 trap 'rm -f "$CHANGED_FILE"' EXIT
 
