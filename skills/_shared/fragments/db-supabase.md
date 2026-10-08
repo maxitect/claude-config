@@ -37,11 +37,18 @@ psql "$(supabase status --output json | jq -er '.DB_URL')"
 #   set local role authenticated;
 #   set local request.jwt.claims = '{"sub":"<uuid>"}';
 #   <the exact query the code runs>
-supabase db lint --linked --schema public --level warning   # plpgsql linter, no Docker needed
+supabase db lint --local --schema <each schema the migrations write to> --level warning   # not just public
+supabase db advisors --local --type all --level warn -o json                            # security + performance
 ```
 
-- `get_advisors` (Supabase MCP, both `security` and `performance`) after any schema change. Reason from the
-  advisor output, never from reading the SQL. MCP unreachable → say so: an unrun advisor is not a clean advisor.
+- The preflight's "Lints that ran" line is the evidence for lint and advisors — quote it. Anything absent from
+  that line did not run: run it yourself before writing "clean". Never pipe a lint through `grep`/`head` and read
+  the exit code — that proves the filter ran, not the lint.
+- A `public`-only lint misses functions in `private` or any other schema — exactly where `SECURITY DEFINER`
+  helpers live. Lint every schema the diff's migrations create objects in.
+- `get_advisors` (Supabase MCP, both `security` and `performance`) or `supabase db advisors` after any schema
+  change. Reason from the advisor output, never from reading the SQL. Unreachable → say so: an unrun advisor
+  is not a clean advisor.
 - Advisors and the linter report the **whole** schema and most projects carry pre-existing findings — attribute
   one to this PR only if it names an object the diff touches.
 - Both read the *linked* project (usually staging), not this branch's preview branch, so a clean result proves

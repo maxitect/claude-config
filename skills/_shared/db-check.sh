@@ -94,13 +94,46 @@ if [ -n "$GEN_CMD" ] && left; then
 fi
 
 # --- lints: report only what comes back ------------------------------------------------------------
-if left; then
-  LINT="$(cap 45 supabase db lint --schema public --level warning)"
-  if [ -n "$(printf '%s' "$LINT" | grep -viE '^\s*$|no schema errors found|Linting schema')" ]; then
-    echo "plpgsql linter (local, post-migration):"
+# Lint public plus every schema the changed migrations write into: a function in `private` is
+# invisible to a public-only lint, and that is exactly where SECURITY DEFINER helpers live.
+MIG_FILES="$(awk -F'\t' '{print $NF}' "$CHANGED" | grep '^supabase/migrations/.*\.sql$' | while read -r f; do [ -f "$f" ] && echo "$f"; done)"
+LINT_SCHEMAS="$( { echo public; [ -n "$MIG_FILES" ] && printf '%s\n' "$MIG_FILES" | xargs grep -ohiE '(function|table|view|type|trigger)[[:space:]]+(if[[:space:]]+(not[[:space:]]+)?exists[[:space:]]+)?"?[a-z_][a-z0-9_]*"?\.' 2>/dev/null \
+  | sed -E 's/.*[[:space:]]"?([a-z_][a-z0-9_]*)"?\.$/\1/I' | tr 'A-Z' 'a-z'; } \
+  | grep -vE '^(pg_catalog|information_schema|extensions|cron|net|vault|storage|auth|realtime|graphql|graphql_public|supabase_functions)$' | sort -u)"
+RAN=()
+
+for s in $LINT_SCHEMAS; do
+  left || break
+  LINT="$(cap 45 supabase db lint --local --schema "$s" --level warning)"
+  if [ -n "$(printf '%s' "$LINT" | grep -viE '^\s*$|no schema errors found|Linting schema|Connecting to|"results":\[\]')" ]; then
+    echo "plpgsql linter, schema \`$s\` (local, post-migration):"
     printf '%s\n' "$LINT" | head -40 | sed 's/^/  | /'
     echo
   fi
+  RAN+=("db lint --schema $s")
+done
+
+# Advisors (security + performance) against the local DB, which has this branch's migrations —
+# the linked project does not. WARN and above only; INFO is mostly unused_index noise locally.
+if left; then
+  ADV_RAW="$(cap 45 supabase db advisors --local --type all --level warn -o json)"
+  ADV="$(printf '%s\n' "$ADV_RAW" | sed -n '/^\[/,$p')"
+  ADV_ROWS="$(printf '%s' "$ADV" | jq -r '.[]? | "\(.level) \(.name): \(.detail)"' 2>/dev/null)"
+  if [ -n "$ADV_ROWS" ]; then
+    echo "Supabase advisors, WARN and above (local, post-migration):"
+    printf '%s\n' "$ADV_ROWS" | head -30 | sed 's/^/  | /'
+    echo
+  fi
+  if printf '%s' "$ADV_RAW" | grep -q 'No issues found' || printf '%s' "$ADV" | jq -e 'type=="array"' >/dev/null 2>&1; then
+    RAN+=("db advisors --type all --level warn")
+  fi
+fi
+
+if [ "${#RAN[@]}" -gt 0 ]; then
+  echo "Lints that ran (anything not printed above came back clean — cite this line as evidence, don't re-run):"
+  printf '  supabase %s\n' "${RAN[@]}"
+  echo "A lint missing from this list did NOT run: run it yourself before calling the schema clean."
+  echo
 fi
 
 if left && command -v psql >/dev/null 2>&1; then

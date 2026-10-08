@@ -1,10 +1,10 @@
-# _shared — machinery behind the PR skills
+# \_shared — machinery behind the PR skills
 
 Not a skill. `pr-review/render.sh` and `address-pr-comments/render.sh` both source this; nothing here is loaded
 into an agent's context except the fragments the renderers print.
 
-| File             | Role                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------- |
+| File             | Role                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------- |
 | `stack.sh`       | Argument parsing, stack/ticket autodetection, and one function per rendered section.         |
 | `gh.sh`          | `gh_t` (capped gh), `gh_json` (capped gh that rejects non-JSON), `gh_jq`, `gh_repo_slug`.    |
 | `_cap.sh`        | `cap <seconds> <cmd>` — hard timeout that kills the whole process group.                     |
@@ -41,14 +41,14 @@ empty pull request instead of taking the no-PR path.
 
 ## Arguments (all optional, order-free)
 
-| Token                                                        | Effect                                                        |
-| ------------------------------------------------------------ | --------------------------------------------------------------- |
-| `monday` `github`\|`gh` `jira`\|`atlassian` `linear`         | Force the ticket tracker                                        |
-| `none`                                                       | Skip ticket lookup entirely                                     |
-| `<number>`                                                   | Target that PR instead of the current branch's                  |
-| `local`                                                      | Skip PR lookup on a branch that has one (`pr-review` only)      |
-| `ts` `python` `pnpm` `npm` `yarn` `bun` `poetry`\|`poe` `uv` | Pin language / package manager                                  |
-| `supabase` `postgres`\|`pg` `mongo`                          | Pin the data layer                                              |
+| Token                                                        | Effect                                                     |
+| ------------------------------------------------------------ | ---------------------------------------------------------- |
+| `monday` `github`\|`gh` `jira`\|`atlassian` `linear`         | Force the ticket tracker                                   |
+| `none`                                                       | Skip ticket lookup entirely                                |
+| `<number>`                                                   | Target that PR instead of the current branch's             |
+| `local`                                                      | Skip PR lookup on a branch that has one (`pr-review` only) |
+| `ts` `python` `pnpm` `npm` `yarn` `bun` `poetry`\|`poe` `uv` | Pin language / package manager                             |
+| `supabase` `postgres`\|`pg` `mongo`                          | Pin the data layer                                         |
 
 Unrecognised tokens are ignored.
 
@@ -78,8 +78,10 @@ behind an MCP should follow the Monday/Jira/Linear shape (render the lookup path
 
 Fires only when the stack is Supabase **and** the diff touches `supabase/migrations/`. In order: locate
 `docs/**/schema.sql` and `docs/**/DATABASE.md`; check the local stack is up (down → says so, findings ship
-UNVERIFIED); `supabase migration up`; regenerate types; `supabase db lint`; RLS and `SECURITY DEFINER` psql
-queries. Failures and non-empty lint output are printed; clean results print nothing.
+UNVERIFIED); `supabase migration up`; regenerate types; `supabase db lint --local` on `public` plus every
+schema the changed migrations create objects in; `supabase db advisors --local --type all --level warn`; RLS
+and `SECURITY DEFINER` psql queries. Failures and non-empty lint output are printed; a closing "Lints that ran"
+line lists every lint that completed, so a clean result is citable and a missing one is visible.
 
 The regeneration step is the interesting one: if `db:gen` changes tracked files, the PR's generated types are
 stale against its own migrations, and that file list is the evidence. It then restores those files — only ones
@@ -91,5 +93,6 @@ Time budget is 100s of the 120s cap, checked between steps.
 
 - The `command -v jq` branch in `gh_jq` is untested: macOS ships jq at `/usr/bin/jq`, so the fallback can't be
   reached without a test seam. `ghjson.py`'s output is verified against `jq -r` on real PR JSON.
-- `db-check.sh` has not run against a live Docker stack — the shapes of real `supabase migration up` and
-  `supabase db lint` output are assumed. The logic is verified with stubbed CLIs.
+- `db-check.sh` lint and advisor steps were run against a live local stack (amagi PR #200); the advisor WARN
+  print path is untested because that run had no WARN-level findings. `supabase migration up` output shape is
+  still assumed.
