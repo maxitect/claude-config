@@ -24,6 +24,7 @@ trap 'rm -f "$CHANGED_FILE"' EXIT
 
 MANIFESTS="$(cat package.json pyproject.toml go.mod Cargo.toml requirements.txt 2>/dev/null)"
 COMPOSE="$(cat docker-compose.yml docker-compose.yaml compose.yml compose.yaml 2>/dev/null)"
+REPO_NAME="$(git remote get-url origin 2>/dev/null | sed -E 's#.*/##; s#\.git$##' | tr '[:upper:]' '[:lower:]')"
 CONVENTIONS="$(find . -maxdepth 3 -name CLAUDE.md -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | sort)"
 
 add_stack() {
@@ -309,6 +310,7 @@ print_stack_fragments() {
     echo "### Stack fragments: none matched ($STACK_MODE)"
     echo
     echo "Work with the universal checklist only, and derive stack conventions from the files above."
+    print_repo_fragment
     return 1
   fi
 
@@ -318,7 +320,15 @@ print_stack_fragments() {
     cat "$FRAG/$f.md"
     echo
   done
+  print_repo_fragment
   return 0
+}
+
+# fragments/repo-<origin repo name>.md: rules for one repo, rendered after the stack fragments.
+print_repo_fragment() {
+  [ -n "$REPO_NAME" ] && [ -f "$FRAG/repo-$REPO_NAME.md" ] || return 0
+  cat "$FRAG/repo-$REPO_NAME.md"
+  echo
 }
 
 maybe_db_check() {
