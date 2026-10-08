@@ -1,23 +1,30 @@
-# pr-sweep: maintenance notes
+# pr-sweep
 
-Not loaded into any agent's context.
+Headless review of every open PR in the current repo. No orchestrating session: `scripts/pr-sweep.sh` drives
+everything, aliased in `~/.zshrc`.
 
 ## Usage
 
 ```
-/pr-sweep               # every open, non-draft PR not authored by me
-/pr-sweep mine          # only PRs assigned to me
-/pr-sweep 757 754       # exactly these PRs (draft/author/fork filters off)
+pr-sweep                     # every open, non-draft PR not authored by me and not already reviewed at its head
+pr-sweep mine                # only PRs assigned to me
+pr-sweep 757 754             # exactly these PRs (draft/author/fork filters off); also resumes failed runs
+pr-sweep status              # furthest stage per PR, resume commands
+pr-sweep ask 757 "why ..."   # ask that PR's reviewer session, print the answer
+pr-sweep open 757            # bring its stack back, print the interactive resume command
+pr-sweep teardown 757 [--full]
 ```
 
-Run it from the repo. The skill switches the session to Sonnet.
+Run it from the repo. Stage lines stream as `[#<pr>] ...`; each PR's full output is in `<state>/<pr>/run.log`.
+Ctrl-C terminates every run (each runs in its own process group) and frees their stacks; re-running resumes each
+from its last finished stage. `claude --resume <id>` also works from the main checkout, not only the worktree.
 
 ## Flow
 
 ```
 preflight.sh            gh/docker/CLIs, base stack up (starts it), fetch, sweep merged/closed PRs
 discover.sh [args]      filters -> queue.json, tags MIG (touches supabase/migrations, seed or config.toml)
-run.sh <n>              per PR, in background, max 4 in flight / 3 MIG:
+run.sh <n>              per PR, launched by pr-sweep.sh, max 4 in flight (PR_SWEEP_RUNS) / 3 MIG:
   prepare.sh <n>        worktree @ head, env files, own stack (MIG) or base, install, gates, context.md
   review.sh <n>         claude -p --agent pr-reviewer (Opus) "/pr-review <n>", --json-schema -> findings.json;
                         PR_SWEEP_CONTEXT makes the skill's render.sh print context.md instead of re-rendering
@@ -37,6 +44,7 @@ so the repo's tsc/eslint never see the worktrees.
 
 | Var | Default | |
 |---|---|---|
+| `PR_SWEEP_RUNS` | 4 | concurrent PR runs |
 | `PR_SWEEP_SLOTS` | 3 | concurrent PR Supabase stacks |
 | `PR_SWEEP_SUPABASE_EXCLUDE` | `studio,imgproxy,vector,logflare,supavisor` | containers not started per PR stack |
 | `PR_SWEEP_REVIEW_TIMEOUT` | 3600 | seconds per reviewer run |
