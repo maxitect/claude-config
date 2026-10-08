@@ -11,6 +11,10 @@
 
 set -uo pipefail
 
+# pr-sweep renders this context in prepare.sh (with the PR's environment block) before the reviewer runs
+# the skill; re-rendering would repeat the database checks against a detached checkout.
+if [ -n "${PR_SWEEP_CONTEXT:-}" ] && [ -f "$PR_SWEEP_CONTEXT" ]; then cat "$PR_SWEEP_CONTEXT"; exit 0; fi
+
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$DIR/../_shared/gh.sh"
 . "$DIR/../_shared/stack.sh"
