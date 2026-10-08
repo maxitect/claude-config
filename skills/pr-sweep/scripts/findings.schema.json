@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "issue_coverage", "findings", "refuted_count", "ui_changed"],
+  "properties": {
+    "summary": { "type": "string", "description": "One paragraph: overall quality, biggest concerns, what is done well." },
+    "issue_coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["criterion", "status"],
+        "properties": {
+          "criterion": { "type": "string" },
+          "status": { "enum": ["met", "partial", "missing", "unverified"] }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "path", "line", "end_line", "side", "title", "problem", "fix", "suggestion", "evidence", "status"],
+        "properties": {
+          "id": { "type": "string", "description": "Short unique slug, e.g. f1" },
+          "severity": { "enum": ["critical", "warning", "suggestion", "praise"] },
+          "path": { "type": "string", "description": "Repo-relative path" },
+          "line": { "type": ["integer", "null"], "description": "Line in the PR head version (side RIGHT) or base version (side LEFT, removed lines). null = about the whole file." },
+          "end_line": { "type": ["integer", "null"], "description": "Last line of a multi-line span, else null" },
+          "side": { "enum": ["RIGHT", "LEFT"] },
+          "title": { "type": "string" },
+          "problem": { "type": "string", "description": "Mechanism and consequence" },
+          "fix": { "type": "string", "description": "Concrete fix" },
+          "suggestion": { "type": ["string", "null"], "description": "Exact replacement text for line..end_line on RIGHT when the fix is contiguous and certain, else null" },
+          "evidence": { "type": "string", "description": "Command run and the decisive output line, or 'UNVERIFIED - <reason>'" },
+          "status": { "enum": ["CONFIRMED", "UNVERIFIED"] }
+        }
+      }
+    },
+    "refuted_count": { "type": "integer", "description": "Findings probed, refuted and dropped" },
+    "ui_changed": { "type": "boolean", "description": "The PR materially changes what the UI looks like or how it behaves" }
+  }
+}
