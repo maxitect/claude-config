@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "comments"],
+  "properties": {
+    "summary": { "type": "string", "description": "Review body: overall take and headline points. Body-anchored findings are added by the script, do not repeat them here." },
+    "comments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["finding_ids", "body"],
+        "properties": {
+          "finding_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "body": { "type": "string" }
+        }
+      }
+    }
+  }
+}
