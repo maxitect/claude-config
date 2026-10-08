@@ -28,12 +28,11 @@ else
   echo "$SID" > "$RUN/reviewer.sid"
   echo "$(date -u +%FT%TZ) $SHA $SID" >> "$RUN/sessions.log"
   SESSION=(--session-id "$SID" --name "pr-$N review")
-  PROMPT="Review PR #$N ($(meta "$N" .title)) per your protocol. Its rendered context follows.
-
-$(cat "$RUN/context.md")"
+  PROMPT="/pr-review $N"   # the skill's render.sh prints context.md instead of re-rendering (PR_SWEEP_CONTEXT)
 fi
 
 cd "$WT" || exit 1
+export PR_SWEEP_CONTEXT="$RUN/context.md"
 cap "$REVIEW_TIMEOUT" claude -p "${SESSION[@]}" "${FLAGS[@]}" \
   --output-format json --json-schema "$SCHEMA" "$PROMPT" < /dev/null > "$LOG" 2>&1
 RC=$?

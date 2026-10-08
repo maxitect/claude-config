@@ -19,7 +19,8 @@ preflight.sh            gh/docker/CLIs, base stack up (starts it), fetch, sweep 
 discover.sh [args]      filters -> queue.json, tags MIG (touches supabase/migrations, seed or config.toml)
 run.sh <n>              per PR, in background, max 4 in flight / 3 MIG:
   prepare.sh <n>        worktree @ head, env files, own stack (MIG) or base, install, gates, context.md
-  review.sh <n>         claude -p --agent pr-reviewer (Opus), --json-schema findings -> findings.json
+  review.sh <n>         claude -p --agent pr-reviewer (Opus) "/pr-review <n>", --json-schema -> findings.json;
+                        PR_SWEEP_CONTEXT makes the skill's render.sh print context.md instead of re-rendering
   validate.py           schema, evidence, line ranges; resolves inline/file/body anchors
                         fail -> review.sh --fix (same session) once
   comment.sh <n>        claude -p --agent pr-commenter (Sonnet) -> comments.json; assemble.py -> payload.json
@@ -61,6 +62,7 @@ head's artefacts go to `history/<sha7>/`.
 
 - `~/.claude/agents/pr-reviewer.md`, `pr-commenter.md`.
 - `_shared/stack.sh`: honours `PR_HEAD_BRANCH`, diffing `HEAD` of a detached checkout as that PR's branch.
+- `pr-review/render.sh`: prints `$PR_SWEEP_CONTEXT` and exits when set.
 - The commenter reads `~/.claude/commands/pr-comment.md` §2–§3 for voice, so that file stays the one source.
 
 ## Known gaps

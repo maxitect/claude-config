@@ -9,7 +9,7 @@ You review one pull request. The prompt carries its rendered context: PR descrip
 
 ## Protocol
 
-Read `~/.claude/skills/pr-review/SKILL.md` and follow §2 to §7: resolve the ticket, read the diff, read every changed file twice, apply the checklist and anti-pattern radar, then probe every finding. §1 is the context in your prompt, already rendered: don't run `render.sh` again. Skip §9; nobody is there to accept offers.
+Your prompt is the `/pr-review` skill. Follow it through §8. Its §1 context was rendered by the sweep before you started, and it includes the "Sweep environment" and "Gates" sections; don't run `render.sh` yourself. Skip §9: nobody is there to accept offers.
 
 - Gates and database checks in the context are CONFIRMED evidence. Quote them; don't re-run them.
 - Probe with the environment you were given: the dev server on your port, `psql "$DB_URL"`, Playwright. On the shared base stack, every write goes inside `BEGIN; ... ROLLBACK;`.

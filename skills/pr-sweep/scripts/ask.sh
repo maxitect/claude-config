@@ -12,5 +12,6 @@ RUN="$(run_dir "$N")"; WT="$(wt_dir "$N")"
 FLAGS=()
 while IFS= read -r f; do FLAGS+=("$f"); done < <(reviewer_flags "$RUN")
 cd "$WT" || exit 1
+export PR_SWEEP_CONTEXT="$RUN/context.md"
 cap "$REVIEW_TIMEOUT" claude -p --resume "$(cat "$RUN/reviewer.sid")" "${FLAGS[@]}" --output-format json "$*" < /dev/null \
   | grep '^{' | tail -1 | jq -r '.result // "ASK FAIL: no answer"'
