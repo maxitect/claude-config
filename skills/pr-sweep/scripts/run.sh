@@ -58,4 +58,4 @@ fi
 stage post python3 "$SCRIPTS/post.py" "$RUN" "$SLUG" "$N"
 "$SCRIPTS/teardown.sh" "$N" >/dev/null
 
-echo "RUN PASS #$N $(jq -r .url "$RUN/posted.json") · report $RUN/review.md · resume: cd $WT && claude --resume $(cat "$RUN/reviewer.sid")"
+echo "RUN PASS #$N $(jq -r .url "$RUN/posted.json") · report $RUN/review.md · resume: cd $WT && $CLAUDE_HINT --resume $(cat "$RUN/reviewer.sid")"

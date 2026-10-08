@@ -19,6 +19,6 @@ for dir in "$SWEEP"/[0-9]*/; do
   [ -f "$r/failed" ] && stage="FAILED at $(cat "$r/failed") ($stage)"
   slot="$(slot_of "$n")"
   sid="$(cat "$r/reviewer.sid" 2>/dev/null)"
-  echo "#$n ${sha:0:7} $stage${slot:+ · slot $slot}${sid:+ · resume: cd $r/wt && claude --resume $sid}"
+  echo "#$n ${sha:0:7} $stage${slot:+ · slot $slot}${sid:+ · resume: cd $r/wt && $CLAUDE_HINT --resume $sid}"
 done
 echo "slots in use: $(ls "$SWEEP/slots" 2>/dev/null | wc -l | tr -d ' ')/$MAX_SLOTS"

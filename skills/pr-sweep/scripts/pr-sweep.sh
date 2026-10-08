@@ -11,6 +11,14 @@
 # Exit 1 if any PR failed. Ctrl-C stops every run and frees their stacks; re-running resumes them.
 
 SCRIPTS="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+
+# --glm: route every headless claude through settings-glm.json's env (the claude-glm alias)
+ARGS=()
+for a in "$@"; do
+  if [ "$a" = "--glm" ]; then export PR_SWEEP_CLAUDE_ENV="$HOME/.claude/settings-glm.json"; else ARGS+=("$a"); fi
+done
+set -- ${ARGS[@]+"${ARGS[@]}"}
+
 case "${1:-}" in
   status|ask|open|teardown) exec "$SCRIPTS/$1.sh" "${@:2}" ;;
 esac

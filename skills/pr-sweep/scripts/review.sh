@@ -39,7 +39,7 @@ RC=$?
 grep '^{' "$LOG" | tail -1 > "$RUN/review.json"   # cap folds stderr in; the result is the one JSON line
 kill_ports "$N"
 
-[ "$RC" -eq 124 ] && die REVIEW "#$N timed out after ${REVIEW_TIMEOUT}s (resume: cd $WT && claude --resume $SID)"
+[ "$RC" -eq 124 ] && die REVIEW "#$N timed out after ${REVIEW_TIMEOUT}s (resume: cd $WT && $CLAUDE_HINT --resume $SID)"
 if ! jq -e '.structured_output' "$RUN/review.json" > "$RUN/findings.json" 2>/dev/null; then
   rm -f "$RUN/findings.json"
   echo "REVIEW FAIL: #$N returned no structured output (exit $RC, log: $LOG)"

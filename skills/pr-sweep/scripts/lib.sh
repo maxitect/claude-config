@@ -14,6 +14,16 @@ SKILL_DIR="$(dirname "$SCRIPTS")"
 SHARED="$(dirname "$SKILL_DIR")/_shared"
 . "$SHARED/_cap.sh"
 
+# Export another settings file's env (e.g. settings-glm.json via --glm) so every
+# headless claude call routes through it — same effect as the claude-glm alias.
+CLAUDE_HINT=claude
+if [ -n "${PR_SWEEP_CLAUDE_ENV:-}" ]; then
+  [ -f "$PR_SWEEP_CLAUDE_ENV" ] || { echo "pr-sweep FAIL: no such settings file: $PR_SWEEP_CLAUDE_ENV" >&2; exit 1; }
+  while IFS='=' read -r k v; do export "$k=$v"; done \
+    < <(jq -r '.env | to_entries[] | "\(.key)=\(.value)"' "$PR_SWEEP_CLAUDE_ENV")
+  CLAUDE_HINT=claude-glm
+fi
+
 MAX_SLOTS="${PR_SWEEP_SLOTS:-3}"
 SUPABASE_EXCLUDE="${PR_SWEEP_SUPABASE_EXCLUDE:-studio,imgproxy,vector,logflare,supavisor}"
 REVIEW_TIMEOUT="${PR_SWEEP_REVIEW_TIMEOUT:-3600}"

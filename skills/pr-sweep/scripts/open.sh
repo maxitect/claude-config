@@ -15,5 +15,5 @@ if [ "$(meta "$N" .mig)" = "true" ] && [ -z "$(supabase_db_url "$WT")" ]; then
   (cd "$WT" && cap 600 supabase start -x "$SUPABASE_EXCLUDE") > "$RUN/open.log" 2>&1 \
     || { LOG="$RUN/open.log"; die OPEN "#$N supabase start failed"; }
 fi
-echo "OPEN PASS #$N: cd $WT && claude --resume $SID"
+echo "OPEN PASS #$N: cd $WT && $CLAUDE_HINT --resume $SID"
 echo "(close it with pr-sweep teardown $N when done; don't pr-sweep ask it while it's open)"
