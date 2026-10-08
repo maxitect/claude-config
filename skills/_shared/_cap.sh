@@ -2,7 +2,8 @@
 #
 # A plain `alarm` only kills the wrapper: children keep the pipe open and the caller's
 # command substitution waits forever. This runs the command in its own process group and
-# kills the group, so `pnpm` and friends die with it. Exit 124 on timeout.
+# kills the group, so `pnpm` and friends die with it. Exit 124 on timeout. INT/TERM to cap are passed on
+# to the group, so stopping a caller stops what it started.
 cap() {
   local t="$1"; shift
   perl -e '
@@ -11,6 +12,7 @@ cap() {
     if (!defined $pid) { exit 125 }
     if ($pid == 0) { setpgrp(0, 0); exec @ARGV; exit 127 }
     $SIG{ALRM} = sub { kill("KILL", -$pid); waitpid($pid, 0); exit 124 };
+    $SIG{INT} = $SIG{TERM} = sub { kill("TERM", -$pid); waitpid($pid, 0); exit 143 };
     alarm $t;
     waitpid($pid, 0);
     alarm 0;
