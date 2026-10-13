@@ -1,7 +1,7 @@
 ---
 name: orchestrate
 description: Run one bounded orchestrator session over a folder of tickets. Builds ready tickets in parallel through ticket-implementer (Sonnet) and ticket-reviewer (Opus) agents in dependency order. Team mode (default) opens draft PRs, marks them ready for review once cleared and stacks dependents on them; solo mode merges cleared PRs into the base. Writes the handover for the next session. Runs its own preflight and refuses to start if it fails.
-argument-hint: "<ticket dir, e.g. docs/testing/tickets> [team|solo]"
+argument-hint: "<ticket dir, e.g. docs/testing/tickets> [team|solo] [<tickets this session>]"
 disable-model-invocation: true
 ---
 
@@ -38,7 +38,7 @@ References:
 
 ## Session scope
 
-Take `ORCH_SESSION_TICKETS` tickets (from the status header) through to ready for review (team) or merged (solo), then wind down. `0` means no cap: run until nothing is ready or in flight.
+Take the session's ticket count (the `session` figure in the status header: the skill's numeric argument, else `ORCH_SESSION_TICKETS`) through to ready for review (team) or merged (solo), then wind down. `0` means no cap: run until nothing is ready or in flight.
 
 - Tickets already in flight count towards the total.
 - Stop launching new tickets once the cap has been started, or when no ready ticket is left. Let everything in flight finish.

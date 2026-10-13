@@ -2,17 +2,19 @@
 # Verifies the machine and repo can run an orchestrated build of a ticket set, sweeps merged tickets, and
 # records the ticket set as the active run. Prints PREFLIGHT PASS plus notes, or PREFLIGHT FAIL: <step>.
 #
-# Usage: preflight.sh <ticket dir, relative to the repo root> [team|solo]
+# Usage: preflight.sh <ticket dir, relative to the repo root> [team|solo] [<n>]
 #   team (default): draft PRs, marked ready for review once cleared; dependents stack on cleared parents
 #   solo: the orchestrator squash-merges cleared PRs into the base; dependents start from the base
+#   <n>: tickets to take this session (overrides ORCH_SESSION_TICKETS; 0 = no cap)
 
-ORCH_TICKETS=""; MODE=""
-for a in "$@"; do case "$a" in team|solo) MODE="$a" ;; *) ORCH_TICKETS="$a" ;; esac; done
+ORCH_TICKETS=""; MODE=""; SESSION=""
+for a in "$@"; do case "$a" in team|solo) MODE="$a" ;; *[!0-9]*|"") ORCH_TICKETS="$a" ;; *) SESSION="$a" ;; esac; done
 . "$(dirname "$0")/lib.sh"
 
 [ -n "$ROOT" ] && [ -d "$ROOT" ] || die PREFLIGHT "not inside a git repository"
 if [ -z "$ORCH_TICKETS" ] && [ -f "$STATE/run.env" ]; then . "$STATE/run.env"; fi
 ORCH_MODE_ARG="$MODE"
+ORCH_SESSION_ARG="$SESSION"
 [ -n "$ORCH_TICKETS" ] || die PREFLIGHT "no ticket dir: /orchestrate <dir with <id>-<slug>.md tickets>"
 ORCH_TICKETS="${ORCH_TICKETS%/}"
 [ -d "$ROOT/$ORCH_TICKETS" ] || die PREFLIGHT "$ORCH_TICKETS is not a directory under $ROOT"
@@ -22,7 +24,7 @@ for bin in git gh jq perl lsof; do command -v "$bin" >/dev/null || die PREFLIGHT
 
 load_config
 mkdir -p "$STATE/slots" "$STATE/locks"
-printf 'ORCH_TICKETS=%s\nORCH_MODE_ARG=%s\n' "$ORCH_TICKETS" "$ORCH_MODE_ARG" > "$STATE/run.env"
+printf 'ORCH_TICKETS=%s\nORCH_MODE_ARG=%s\nORCH_SESSION_ARG=%s\n' "$ORCH_TICKETS" "$ORCH_MODE_ARG" "$ORCH_SESSION_ARG" > "$STATE/run.env"
 open_log "$STATE/preflight.log"
 cd "$ROOT" || exit 1
 
@@ -80,4 +82,4 @@ if [ "$ORCH_PREFLIGHT_GATES" = "1" ]; then
   done <<< "$(gate_cmds "$ROOT")"
 fi
 
-finish PREFLIGHT "$SLUG, tickets $ORCH_TICKETS, mode $ORCH_MODE, base $ORCH_BASE, state $STATE"
+finish PREFLIGHT "$SLUG, tickets $ORCH_TICKETS, mode $ORCH_MODE, session $ORCH_SESSION_TICKETS tickets, base $ORCH_BASE, state $STATE"

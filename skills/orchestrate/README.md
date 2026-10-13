@@ -23,7 +23,7 @@ The scripts reuse `_shared/_cap.sh`, and `pr-sweep/scripts/patch_supabase.py` fo
 1. Write tickets as `<dir>/<id>-<slug>.md` from `_TEMPLATE.md`. Set `depends_on`, and `serial` tags for files several tickets edit.
 2. Add `<dir>/orchestrate.env` (below), and `<dir>/INSTRUCTIONS.md` for repo-specific agent rules (seed users, platform IDs, what never to touch).
 3. Make sure `.claude/worktrees/` is git-ignored. The ticket dir can be committed or local-only (add it to `.git/info/exclude`); either way agents read it from the main checkout and never commit it.
-4. Check out the base branch in the main checkout, clean and pushed, and run `/orchestrate <dir>` (team) or `/orchestrate <dir> solo`. Re-run it for each session; the handover carries context between sessions.
+4. Check out the base branch in the main checkout, clean and pushed, and run `/orchestrate <dir>` (team) or `/orchestrate <dir> solo`. Add a number to cap the session, e.g. `/orchestrate <dir> 2` for a trial run on two tickets. Re-run it for each session; the handover carries context between sessions.
 
 ## orchestrate.env
 
@@ -34,7 +34,7 @@ Shell assignments, sourced by every script. All are optional.
 | `ORCH_BASE` | the repo's default branch | The branch unstacked ticket PRs target (and, in solo mode, merge into) |
 | `ORCH_MODE` | `team` | `team` or `solo`. The skill argument overrides it for that session |
 | `ORCH_PARALLEL` | 3 | Implementers in flight at once |
-| `ORCH_SESSION_TICKETS` | 6 | Tickets taken to merged per session. `0` means no cap |
+| `ORCH_SESSION_TICKETS` | 6 | Tickets taken to ready for review (team) or merged (solo) per session. `0` means no cap. The skill's numeric argument overrides it |
 | `ORCH_SLOTS` | 2 | Concurrent per-ticket Supabase stacks (`migrations: true` or `own_db: true` tickets) |
 | `ORCH_GATES` | detected | `"name=cmd;name=cmd"`, replacing the detected build, typecheck, lint and test scripts |
 | `ORCH_SETUP` | none | Command run after install in preflight and in every worktree (e.g. type generation) |

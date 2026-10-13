@@ -3,7 +3,7 @@
 #
 # Layout (nothing is written inside the repo except agent worktrees under .claude/worktrees/):
 #   $STATE/                     ~/orchestrate/<owner>__<repo>
-#   $STATE/run.env              written by preflight: ORCH_TICKETS (repo-relative) and ORCH_MODE_ARG
+#   $STATE/run.env              written by preflight: ORCH_TICKETS (repo-relative), ORCH_MODE_ARG, ORCH_SESSION_ARG
 #   $STATE/HANDOVER.md          the orchestrator's notes for the next session
 #   $STATE/parked               one "<id> <reason>" line per parked ticket
 #   $STATE/slots/<k>            lock dir for Supabase slot k, holds the ticket id
@@ -34,7 +34,7 @@ load_config() {
   ORCH_MODE="${ORCH_MODE_ARG:-${ORCH_MODE:-team}}"
   case "$ORCH_MODE" in team|solo) ;; *) die CONFIG "ORCH_MODE must be team or solo, got $ORCH_MODE" ;; esac
   ORCH_PARALLEL="${ORCH_PARALLEL:-3}"
-  ORCH_SESSION_TICKETS="${ORCH_SESSION_TICKETS:-6}"
+  ORCH_SESSION_TICKETS="${ORCH_SESSION_ARG:-${ORCH_SESSION_TICKETS:-6}}"
   ORCH_SLOTS="${ORCH_SLOTS:-2}"
   ORCH_PREFLIGHT_GATES="${ORCH_PREFLIGHT_GATES:-1}"
   ORCH_SETUP="${ORCH_SETUP:-}"

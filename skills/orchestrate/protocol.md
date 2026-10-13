@@ -16,7 +16,7 @@ Each prints one `PASS` line, or `FAIL: <step>`, the last lines of output and the
 
 | Script | Who runs it | What it does |
 |---|---|---|
-| `$S/preflight.sh <dir> [team\|solo]` | orchestrator (the skill runs it) | Checks tools, auth and the base checkout, starts the local database stack, sweeps, installs and runs the gates. Records `<dir>` and the mode as the active run |
+| `$S/preflight.sh <dir> [team\|solo] [<n>]` | orchestrator (the skill runs it) | Checks tools, auth and the base checkout, starts the local database stack, sweeps, installs and runs the gates. Records `<dir>`, the mode and the session's ticket cap as the active run |
 | `$S/setup.sh <id>` | implementer, in its worktree | Names the branch `ticket/<id>-<slug>` and starts it from its PR base (the run's base, or in team mode the cleared parent it stacks on), copies the local env files (remapping `:3000` to the ticket's port), starts the ticket's own Supabase stack when it has `migrations: true` or `own_db: true`, installs and runs the repo's setup command. Prints the PR base, the `/pr-prep` command, the port, `DB_URL` and artefacts dir. Idempotent |
 | `$S/gates.sh` | implementer, reviewer | Runs the repo's gates (build, typecheck, lint, test, or `ORCH_GATES`), one worktree at a time machine-wide, and records the tree they passed on |
 | `$S/stop-check.sh` | the implementer's Stop hook | Blocks finishing until the report is committed, the gates passed on the current code, and the PR is open against its base (a draft in team mode), pushed and free of AI attribution |
