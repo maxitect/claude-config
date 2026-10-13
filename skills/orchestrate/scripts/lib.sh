@@ -57,11 +57,12 @@ open_log() { mkdir -p "$(dirname "$1")"; LOG="$1"; : > "$LOG"; }
 
 # step <label> <name> <cmd...>: runs a command into $LOG; on failure prints the tail and exits 1.
 step() {
-  local label="$1" name="$2"; shift 2
+  local label="$1" name="$2" start; shift 2
   echo "\$ $*" >> "$LOG"
+  start=$(( $(wc -l < "$LOG") + 1 ))
   if ! "$@" >> "$LOG" 2>&1; then
     echo "$label FAIL: $name (log: $LOG)"
-    tail -15 "$LOG"
+    tail -n +"$start" "$LOG" | tail -15
     exit 1
   fi
 }
