@@ -1,6 +1,7 @@
 ---
 id: T00
 title: Short imperative title
+type: feat
 depends_on: []
 serial: []
 migrations: false

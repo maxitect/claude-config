@@ -17,7 +17,7 @@ Each prints one `PASS` line, or `FAIL: <step>`, the last lines of output and the
 | Script | Who runs it | What it does |
 |---|---|---|
 | `$S/preflight.sh <dir> [team\|solo] [<n>]` | orchestrator (the skill runs it) | Checks tools, auth and the base checkout, starts the local database stack, sweeps, installs and runs the gates. Records `<dir>`, the mode and the session's ticket cap as the active run |
-| `$S/setup.sh <id>` | implementer, in its worktree | Names the branch `ticket/<id>-<slug>` and starts it from its PR base (the run's base, or in team mode the cleared parent it stacks on), copies the local env files (remapping `:3000` to the ticket's port), starts the ticket's own Supabase stack when it has `migrations: true` or `own_db: true`, installs and runs the repo's setup command. Prints the PR base, the `/pr-prep` command, the port, `DB_URL` and artefacts dir. Idempotent |
+| `$S/setup.sh <id>` | implementer, in its worktree | Names the branch `<type>/<id>-<slug>` and starts it from its PR base (the run's base, or in team mode the cleared parent it stacks on), copies the local env files (remapping `:3000` to the ticket's port), starts the ticket's own Supabase stack when it has `migrations: true` or `own_db: true`, installs and runs the repo's setup command. Prints the PR base, the `/pr-prep` command, the port, `DB_URL` and artefacts dir. Idempotent |
 | `$S/gates.sh` | implementer, reviewer | Runs the repo's gates (build, typecheck, lint, test, or `ORCH_GATES`), one worktree at a time machine-wide, and records the tree they passed on |
 | `$S/stop-check.sh` | the implementer's Stop hook | Blocks finishing until the report is committed, the gates passed on the current code, and the PR is open against its base (a draft in team mode), pushed and free of AI attribution |
 | `$S/status.sh` | orchestrator | In-flight and cleared tickets (PR, report, verdict, worktree, restack needed), ready tickets with where they branch from and any hold, parked tickets, and counts |
@@ -26,7 +26,9 @@ Each prints one `PASS` line, or `FAIL: <step>`, the last lines of output and the
 | `$S/restack.sh <id>` | orchestrator | Rebases a stacked ticket onto its parent's new tip, or onto the parent's base once the parent merged, and retargets the PR |
 | `$S/sweep.sh` | preflight, ready, merge | Removes merged tickets' worktrees, branches, slots, dev servers and Neon preview branches; in team mode frees cleared tickets' worktrees too |
 
-State lives outside the repo in `~/orchestrate/<owner>__<repo>/`: the per-ticket `env` (port, `DB_URL`, `PR_BASE`, `PARENT_TIP`), logs, `gates.ok` and `artefacts/`, plus `HANDOVER.md` and `parked`.
+State lives outside the repo in `~/orchestrate/<owner>__<repo>/`: the per-ticket `env` (port, `DB_URL`, `PR_BASE`, `PARENT_TIP`), logs, `gates.ok` and `artefacts/`, plus `reports/`, `HANDOVER.md` and `parked`.
+
+A worktree-isolated implementer can read anything, but it can write in the repository only inside its own worktree. Write files outside the repo (reports, artefacts) with Write or a simple Bash command. Never edit the main checkout: if a ticket asks for a change to a file there (e.g. a shared planning doc), record it in the report for the orchestrator to apply.
 
 ### Modes
 
@@ -83,13 +85,13 @@ Rules:
 
 ## 4. Report format
 
-`<ticket dir>/reports/<id>.md`, in the main checkout (the path `setup.sh` prints). Never committed: the ticket dir may be local-only, and the report is evidence for the orchestrator, not part of the change. The scripts read the verdict from this file.
+`~/orchestrate/<owner>__<repo>/reports/<id>.md`, the path `setup.sh` prints. It lives outside the repo because a worktree-isolated agent can't write anywhere in the repository except its own worktree, and because the report is evidence for the orchestrator, not part of the change. The scripts read the verdict from this file.
 
 ```markdown
 # <id> report: <title>
 
 Status: DONE | BLOCKED
-Branch: ticket/<id>-<slug>
+Branch: <type>/<id>-<slug>
 Verify cycles: <n>
 
 ## Summary table
@@ -136,6 +138,7 @@ One file per ticket, `<id>-<slug>.md`, where the id is letters then digits (`T07
 | Key | Meaning |
 |---|---|
 | `id`, `title` | Must match the file name |
+| `type` | Conventional-commit type for the branch prefix: the branch is `<type>/<id>-<slug>` in lower case (e.g. `test/t12-vitest-infra`). Defaults to `ORCH_BRANCH_TYPE`, else `feat` |
 | `depends_on` | `[T01, T03]`: tickets that must be merged (solo), or merged or cleared (team), before this one starts |
 | `serial` | `[fixture, ci]`: tags that no two in-flight tickets may share. Use one for any file several tickets edit (a seed file, a CI workflow, a shared config) |
 | `migrations` | `true` when the ticket changes migrations: it gets its own database stack and the implicit `migrations` serial tag |

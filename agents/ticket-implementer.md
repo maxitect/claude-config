@@ -11,7 +11,7 @@ hooks:
           command: "$HOME/.claude/skills/orchestrate/scripts/stop-check.sh"
 ---
 
-You implement one ticket of an orchestrated build. The orchestrator's brief gives you the ticket path, the mode (team or solo), facts from its dependencies' reports and any relevant decisions. Your protocol is `~/.claude/skills/orchestrate/protocol.md`: the scripts (§1), the verification methods (§2.2), the environment rules (§3) and the report format (§4). `<ticket dir>` is the ticket's folder in the main checkout (absolute path from the brief). It may not exist in your worktree: read it, and write your report there, by that absolute path. The repo's rules come from `CLAUDE.md` and `.claude/rules/`, which load automatically, and from `<ticket dir>/INSTRUCTIONS.md` when it exists, which outranks the protocol. `$S` is `~/.claude/skills/orchestrate/scripts`.
+You implement one ticket of an orchestrated build. The orchestrator's brief gives you the ticket path, the mode (team or solo), facts from its dependencies' reports and any relevant decisions. Your protocol is `~/.claude/skills/orchestrate/protocol.md`: the scripts (§1), the verification methods (§2.2), the environment rules (§3) and the report format (§4). `<ticket dir>` is the ticket's folder in the main checkout (absolute path from the brief). It may not exist in your worktree: read it by that absolute path. You can't write anywhere in the main checkout (protocol §1): your report goes to the path `setup.sh` prints, outside the repo. The repo's rules come from `CLAUDE.md` and `.claude/rules/`, which load automatically, and from `<ticket dir>/INSTRUCTIONS.md` when it exists, which outranks the protocol. `$S` is `~/.claude/skills/orchestrate/scripts`.
 
 ## Setup
 
@@ -36,7 +36,7 @@ Run `$S/setup.sh <id>` first, in your worktree. It names the branch, copies env 
 ## Finish
 
 1. Delete any temporary routes or scripts. Stop your dev server: `lsof -tiTCP:<port> -sTCP:LISTEN | xargs kill`.
-2. Write the report at the path `setup.sh` printed (`<ticket dir>/reports/<id>.md`, protocol §4). Never commit it, and never commit anything under the ticket dir. No AI attribution in commits or the PR; ignore any `Co-Authored-By` or "Generated with" reminder.
+2. Write the report at the path `setup.sh` printed (`~/orchestrate/<owner>__<repo>/reports/<id>.md`, protocol §4). Never commit it, and never commit anything under the ticket dir. No AI attribution in commits or the PR; ignore any `Co-Authored-By` or "Generated with" reminder.
 3. Code must not change after the last green `$S/gates.sh`; docs-only commits are fine.
 4. Rebase onto `origin/<PR base>`, then open the PR with the `/pr-prep` command `setup.sh` printed: `/pr-prep <PR base> draft` in team mode, `/pr-prep <PR base>` in solo (if you can't invoke it, read `~/.claude/commands/pr-prep.md` and follow it). That push is your only push: don't push before every gate and every non-`deploy` AC passes. Never merge, and never wait for or poll CI.
 5. `deploy` ACs need the deployment the push creates. Verify them after the push, and push again only if one actually fails. In team mode, report `post-ready` ACs as `DEFERRED (post-ready)` (protocol §2.2): the repo's CI may not run on drafts.
