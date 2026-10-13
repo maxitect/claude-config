@@ -15,7 +15,7 @@ cd "$ROOT" || exit 1
 open_log "$STATE/$ID/ready.log"
 git fetch origin --prune --quiet
 
-PR_JSON="$(ticket_prs | jq -c --arg p "ticket/$ID-" '[.[] | select((.headRefName | startswith($p)) and .state == "OPEN")][0] // empty')"
+PR_JSON="$(ticket_prs | jq -c --arg b "$(ticket_branch "$ID")" '[.[] | select(.headRefName == $b and .state == "OPEN")][0] // empty')"
 [ -n "$PR_JSON" ] || die READY "no open PR for $ID"
 PR="$(jq -r .number <<< "$PR_JSON")"; BRANCH="$(jq -r .headRefName <<< "$PR_JSON")"
 
@@ -24,6 +24,10 @@ no_attribution() { ! attribution_in "$(gh pr view "$PR" --json body -q .body)" |
 nothing_unpushed() {
   git show-ref --verify --quiet "refs/heads/$BRANCH" || return 0
   [ -z "$(git log "origin/$BRANCH..$BRANCH" --oneline)" ] || { echo "unpushed commits on $BRANCH: the reviewer must push them"; return 1; }
+}
+add_labels() {
+  [ -n "$ORCH_PR_LABELS" ] || return 0
+  gh pr edit "$PR" --add-label "$ORCH_PR_LABELS"
 }
 mark_ready() {
   [ "$(jq -r .isDraft <<< "$PR_JSON")" = true ] || { NOTES+=("PR #$PR was already ready for review"); return 0; }
@@ -34,7 +38,7 @@ mark_ready() {
 stack_link() {
   local base; base="$(jq -r .baseRefName <<< "$PR_JSON")"
   [ -n "$(id_from_branch "$base")" ] || return 0
-  if ! gh extension list 2>/dev/null | grep -q 'gh-stack'; then NOTES+=("gh-stack not installed: $BRANCH not grouped with $base"); return 0; fi
+  if ! grep -q 'gh-stack' <<< "$(gh extension list 2>/dev/null)"; then NOTES+=("gh-stack not installed: $BRANCH not grouped with $base"); return 0; fi
   local siblings; siblings="$(gh pr list --state open --base "$base" --json number -q 'length')"
   if [ "$siblings" -gt 1 ]; then NOTES+=("$base has $siblings stacked children: not grouped (gh-stack stacks are linear)"); return 0; fi
   local out rc; out="$(gh stack link "$base" "$BRANCH" 2>&1)"; rc=$?
@@ -64,6 +68,7 @@ after_ready() {
 step READY "review verdict" review_verdict
 step READY "no AI attribution" no_attribution
 step READY "nothing unpushed" nothing_unpushed
+step READY "labels" add_labels
 step READY "checks" checks_green "$PR"
 step READY "ready for review #$PR" mark_ready
 step READY "stack link" stack_link

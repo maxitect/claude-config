@@ -15,7 +15,7 @@ cd "$ROOT" || exit 1
 open_log "$STATE/$ID/merge.log"
 git fetch origin --prune --quiet
 
-PR_JSON="$(ticket_prs | jq -c --arg p "ticket/$ID-" '[.[] | select((.headRefName | startswith($p)) and .state == "OPEN")][0] // empty')"
+PR_JSON="$(ticket_prs | jq -c --arg b "$(ticket_branch "$ID")" '[.[] | select(.headRefName == $b and .state == "OPEN")][0] // empty')"
 [ -n "$PR_JSON" ] || die MERGE "no open PR for $ID"
 PR="$(jq -r .number <<< "$PR_JSON")"; BRANCH="$(jq -r .headRefName <<< "$PR_JSON")"; REMOTE="origin/$BRANCH"
 [ "$(jq -r .baseRefName <<< "$PR_JSON")" = "$ORCH_BASE" ] || die MERGE "PR #$PR targets $(jq -r .baseRefName <<< "$PR_JSON"), not $ORCH_BASE"
@@ -82,6 +82,8 @@ mergeable() {
   echo "GitHub has not computed mergeability; retry shortly"; return 1
 }
 
+add_labels() { [ -z "$ORCH_PR_LABELS" ] || gh pr edit "$PR" --add-label "$ORCH_PR_LABELS"; }
+
 squash_merge() {
   gh pr merge "$PR" --squash --subject "$(jq -r .title <<< "$PR_JSON") (#$PR)" --body "" || return 1
   git push origin --delete "$BRANCH" 2>/dev/null
@@ -108,7 +110,7 @@ after_merge() {
   local swept other files shared prod
   swept="$("$SCRIPTS/sweep.sh" 2>&1)"; [ -n "$swept" ] && NOTES+=("$swept")
   local mig; mig="$(touches "$ORCH_MIGRATION_PATHS" "${PR_FILES[@]+"${PR_FILES[@]}"}")"
-  for other in $(gh pr list --state open --base "$ORCH_BASE" --json number,headRefName -q '.[] | select(.headRefName | startswith("ticket/")) | "\(.number):\(.headRefName)"'); do
+  for other in $(ticket_prs | jq -r --arg b "$ORCH_BASE" '.[] | select(.state == "OPEN" and .baseRefName == $b) | "\(.number):\(.headRefName)"'); do
     files="$(gh pr view "${other%%:*}" --json files -q '.files[].path')"
     shared="$(comm -12 <(printf '%s\n' "${PR_FILES[@]+"${PR_FILES[@]}"}" | sort) <(sort <<< "$files") | paste -sd, -)"
     if [ -n "$mig" ] && [ -n "$(touches "$ORCH_MIGRATION_PATHS" $files)" ]; then
@@ -127,6 +129,7 @@ step MERGE "no AI attribution" no_attribution
 step MERGE "no unpushed code" unpushed_docs_only
 step MERGE "up to date with $ORCH_BASE" up_to_date
 step MERGE "mergeable" mergeable
+step MERGE "labels" add_labels
 step MERGE "checks" checks_green "$PR"
 step MERGE "squash-merge #$PR" squash_merge
 step MERGE "sync $ORCH_BASE" sync_base

@@ -32,15 +32,18 @@ remove_ticket() {  # remove_ticket <branch> [worktree] [keep-state]
   return 0
 }
 
-git -C "$ROOT" worktree list --porcelain | awk '/^worktree /{p=substr($0,10)} /^branch refs\/heads\/ticket\//{print p "|" substr($0,19)}' \
+BRANCHES="$(ticket_branches)"
+git -C "$ROOT" worktree list --porcelain | awk '/^worktree /{p=substr($0,10)} /^branch refs\/heads\//{print p "|" substr($0,19)}' \
   | while IFS='|' read -r wt branch; do
+      grep -qxF "$branch" <<< "$BRANCHES" || continue
       if merged "$branch"; then remove_ticket "$branch" "$wt" && echo "removed merged worktree $branch"
       elif cleared "$branch"; then remove_ticket "$branch" "$wt" keep && echo "removed worktree of $branch (ready for review)"
       fi
     done
 
 in_use="$(git -C "$ROOT" worktree list --porcelain | sed -n 's@^branch refs/heads/@@p')"
-git -C "$ROOT" for-each-ref --format='%(refname:short)' refs/heads/ticket/ | while read -r branch; do
+printf '%s\n' "$BRANCHES" | grep . | while read -r branch; do
+  git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch" || continue
   grep -qxF "$branch" <<< "$in_use" && continue
   if merged "$branch"; then
     remove_ticket "$branch" && echo "deleted merged branch $branch"
@@ -61,12 +64,13 @@ done
 
 if [ -n "$ORCH_NEON_PROJECT" ] && command -v neonctl >/dev/null; then
   neonctl branches list --project-id "$ORCH_NEON_PROJECT" --output json 2>/dev/null \
-    | jq -r '.[] | select(.name | test("^(preview/)?ticket/")) | "\(.id) \(.name)"' \
+    | jq -r '.[] | "\(.id) \(.name)"' \
     | while read -r nid name; do
         head="${name#preview/}"
+        grep -qxF "$head" <<< "$BRANCHES" || continue
         merged "$head" || continue
         pr="$(jq -r --arg h "$head" '.[] | select(.headRefName == $h) | .number' <<< "$PRS" | head -1)"
-        if (cd "$ROOT" && gh pr checks "$pr" --json bucket -q '.[].bucket' 2>/dev/null) | grep -q pending; then
+        if grep -q pending <<< "$(cd "$ROOT" && gh pr checks "$pr" --json bucket -q '.[].bucket' 2>/dev/null)"; then
           echo "neon: kept $name (PR #$pr checks still running)"; continue
         fi
         neonctl branches delete "$nid" --project-id "$ORCH_NEON_PROJECT" >/dev/null 2>&1 \

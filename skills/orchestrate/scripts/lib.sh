@@ -5,6 +5,7 @@
 #   $STATE/                     ~/orchestrate/<owner>__<repo>
 #   $STATE/run.env              written by preflight: ORCH_TICKETS (repo-relative), ORCH_MODE_ARG, ORCH_SESSION_ARG
 #   $STATE/HANDOVER.md          the orchestrator's notes for the next session
+#   $STATE/reports/<id>.md      each ticket's report (kept after merge)
 #   $STATE/parked               one "<id> <reason>" line per parked ticket
 #   $STATE/slots/<k>            lock dir for Supabase slot k, holds the ticket id
 #   $STATE/locks/gates          lock dir serialising gates machine-wide (builds are memory-hungry)
@@ -35,6 +36,8 @@ load_config() {
   case "$ORCH_MODE" in team|solo) ;; *) die CONFIG "ORCH_MODE must be team or solo, got $ORCH_MODE" ;; esac
   ORCH_PARALLEL="${ORCH_PARALLEL:-3}"
   ORCH_SESSION_TICKETS="${ORCH_SESSION_ARG:-${ORCH_SESSION_TICKETS:-6}}"
+  ORCH_BRANCH_TYPE="${ORCH_BRANCH_TYPE:-feat}"
+  ORCH_PR_LABELS="${ORCH_PR_LABELS:-}"
   ORCH_SLOTS="${ORCH_SLOTS:-2}"
   ORCH_PREFLIGHT_GATES="${ORCH_PREFLIGHT_GATES:-1}"
   ORCH_SETUP="${ORCH_SETUP:-}"
@@ -113,17 +116,35 @@ fm_list() { fm "$1" "$2" | tr -d '[]",'"'" | tr -s ' ' | sed 's/^ //; s/ $//'; }
 
 fm_true() { [ "$(fm "$1" "$2")" = "true" ]; }
 
-ticket_branch() { echo "ticket/$(basename "$(ticket_file "$1" "${2:-}")" .md)"; }
+# A ticket's branch follows the conventional-commit prefix: <type>/<id>-<slug>, lower case, where <type> is the
+# ticket's `type` frontmatter, else ORCH_BRANCH_TYPE (feat). E.g. test/t12-vitest-infra.
+branch_of_file() {
+  local type; type="$(fm "$1" type)"
+  echo "${type:-$ORCH_BRANCH_TYPE}/$(basename "$1" .md | tr '[:upper:]' '[:lower:]')"
+}
 
-id_from_branch() { [[ "$1" =~ ^ticket/([A-Za-z]+[0-9]+)- ]] && echo "${BASH_REMATCH[1]}"; }
+ticket_branch() { branch_of_file "$(ticket_file "$1" "${2:-}")"; }
+
+# Every ticket branch in the active set, one per line.
+ticket_branches() {
+  [ -n "$ORCH_TICKETS" ] || return 0
+  local f; for f in $(ticket_files "$(ticket_dir)"); do branch_of_file "$f"; done
+}
+
+# The ticket id a branch belongs to, or nothing when it is not one of the active set's ticket branches.
+id_from_branch() {
+  [[ "$1" =~ ^[a-z]+/([a-z]+[0-9]+)- ]] || return 0
+  local id; id="$(echo "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')"
+  grep -qxF "$1" <<< "$(ticket_branches)" && echo "$id"
+}
 
 id_num() { echo $((10#$(echo "$1" | tr -dc '0-9'))); }
 
 dev_port() { echo $((5000 + $(id_num "$1") % 1000)); }
 
-# Reports live beside the tickets in the main checkout, never in a ticket branch: the ticket dir may be
-# local-only (untracked), and a report is orchestration evidence, not part of the change.
-report_path() { echo "$ROOT/$ORCH_TICKETS/reports/$1.md"; }
+# Reports live in the state dir, outside the repo: worktree-isolated agents can't write anywhere in the
+# repository except their own worktree, and a report is orchestration evidence, not part of the change.
+report_path() { echo "$STATE/reports/$1.md"; }
 
 # --- git ---------------------------------------------------------------------------------------------
 
@@ -146,7 +167,7 @@ code_unchanged_since() {
 # Every PR whose head is a ticket branch, as JSON.
 ticket_prs() {
   (cd "$ROOT" && gh pr list --state all --limit 300 --json number,state,isDraft,headRefName,baseRefName,headRefOid,mergeCommit,title,url \
-    | jq '[.[] | select(.headRefName | startswith("ticket/"))]')
+    | jq --argjson b "$(ticket_branches | jq -R . | jq -s .)" '[.[] | select(.headRefName as $h | $b | index($h))]')
 }
 
 # --- stack -------------------------------------------------------------------------------------------
@@ -295,7 +316,7 @@ build_table() {  # build_table <file>
   PRS="$(ticket_prs)"
   git -C "$ROOT" fetch origin --prune --quiet 2>/dev/null
   for f in $(ticket_files "$(ticket_dir)"); do
-    id="$(ticket_id_of "$f")"; branch="ticket/$(basename "$f" .md)"
+    id="$(ticket_id_of "$f")"; branch="$(branch_of_file "$f")"
     serial="$(fm_list "$f" serial)"; fm_true "$f" migrations && serial="$serial migrations"
     flags=""; fm_true "$f" requires_human && flags=HUMAN
     pr="$(jq -c --arg h "$branch" '[.[] | select(.headRefName == $h and .state == "OPEN")][0] // empty' <<< "$PRS")"

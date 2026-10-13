@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prepares one ticket's worktree: names the branch ticket/<id>-<slug> and, on first run, starts it from the
+# Prepares one ticket's worktree: names the branch <type>/<id>-<slug> and, on first run, starts it from the
 # right base (the run's base, or in team mode the cleared parent it stacks on), copies the main checkout's local env
 # files (remapping :3000 to the ticket's port), gives the ticket its own Supabase stack when it has
 # migrations: true or own_db: true, installs, and runs the repo's setup command. Idempotent: re-run it to resume.
@@ -66,7 +66,7 @@ MAP=""
 SLOT=""
 if is_supabase "$TOP" && { fm_true "$TICKET" migrations || fm_true "$TICKET" own_db; }; then
   SLOT="$(claim_slot "$ID" 3600)" || die SETUP "no supabase slot free after 60 minutes (ORCH_SLOTS=$ORCH_SLOTS)"
-  if ! git ls-files -v supabase/config.toml | grep -q '^S'; then
+  if ! grep -q '^S' <<< "$(git ls-files -v supabase/config.toml)"; then
     MAP="$(python3 "$PATCH_SUPABASE" supabase/config.toml "$SLOT" "$(id_num "$ID")" "$PORT")" || die SETUP "could not patch supabase/config.toml"
     git update-index --skip-worktree supabase/config.toml
     printf '%s\n' "$MAP" > "$RUN/port-map"
