@@ -82,7 +82,7 @@ if [ -n "$SLOT" ] && [ -z "$(supabase_db_url "$TOP")" ]; then
   step SETUP "supabase start (own stack, slot $SLOT)" cap 900 supabase start -x "$ORCH_SUPABASE_EXCLUDE"
 fi
 while read -r cmd; do
-  [ -n "$cmd" ] && step SETUP "$cmd" env CI=1 cap 900 sh -c "$cmd"
+  [ -n "$cmd" ] && step SETUP "$cmd" cap 900 env CI=1 sh -c "$cmd"
 done <<< "$(install_cmds "$TOP")"
 [ -n "$ORCH_SETUP" ] && step SETUP "$ORCH_SETUP" cap 600 sh -c "$ORCH_SETUP"
 

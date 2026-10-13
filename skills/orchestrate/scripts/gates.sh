@@ -19,7 +19,7 @@ lock "$STATE/locks/gates" 7200 || die GATES "gates lock held for 2h ($STATE/lock
 trap 'rm -rf "$STATE/locks/gates"' EXIT
 rm -f "$RUN/gates.ok"
 while read -r name cmd; do
-  [ -n "$name" ] && step GATES "$name ($cmd)" env CI=1 NO_COLOR=1 FORCE_COLOR=0 cap "$ORCH_GATE_TIMEOUT" sh -c "$cmd"
+  [ -n "$name" ] && step GATES "$name ($cmd)" cap "$ORCH_GATE_TIMEOUT" env CI=1 NO_COLOR=1 FORCE_COLOR=0 sh -c "$cmd"
 done <<< "$CMDS"
 working_tree "$TOP" > "$RUN/gates.ok"
 

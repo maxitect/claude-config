@@ -65,13 +65,13 @@ SWEPT="$("$SCRIPTS/sweep.sh" 2>&1)"
 [ -n "$SWEPT" ] && NOTES+=("$SWEPT")
 
 while read -r cmd; do
-  [ -n "$cmd" ] && step PREFLIGHT "$cmd" env CI=1 cap 900 sh -c "$cmd"
+  [ -n "$cmd" ] && step PREFLIGHT "$cmd" cap 900 env CI=1 sh -c "$cmd"
 done <<< "$(install_cmds "$ROOT")"
 [ -n "$ORCH_SETUP" ] && step PREFLIGHT "$ORCH_SETUP" cap 600 sh -c "$ORCH_SETUP"
 
 if [ "$ORCH_PREFLIGHT_GATES" = "1" ]; then
   while read -r name cmd; do
-    [ -n "$name" ] && step PREFLIGHT "$name ($cmd)" env CI=1 NO_COLOR=1 cap "$ORCH_GATE_TIMEOUT" sh -c "$cmd"
+    [ -n "$name" ] && step PREFLIGHT "$name ($cmd)" cap "$ORCH_GATE_TIMEOUT" env CI=1 NO_COLOR=1 sh -c "$cmd"
   done <<< "$(gate_cmds "$ROOT")"
 fi
 
