@@ -7,6 +7,12 @@ INPUT="$(cat)"
 CWD="$(jq -r '.cwd // empty' <<< "$INPUT")"
 [ -n "$CWD" ] && cd "$CWD" 2>/dev/null
 [ "$(jq -r '.stop_hook_active // false' <<< "$INPUT")" = "true" ] && exit 0
+# As SubagentStop, cwd is the parent session's (the main checkout); the agent's own worktree is named after it.
+AGENT="$(jq -r '.agent_id // empty' <<< "$INPUT")"
+if [ -n "$AGENT" ]; then
+  MAIN="$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd)")"
+  [ -d "$MAIN/.claude/worktrees/agent-$AGENT" ] && cd "$MAIN/.claude/worktrees/agent-$AGENT"
+fi
 
 . "$(dirname "$0")/lib.sh"
 ID="$(id_from_branch "$(git branch --show-current 2>/dev/null)")"
@@ -16,7 +22,7 @@ load_config
 block() { echo "Not finished: $1" >&2; exit 2; }
 
 REPORT="$(report_path "$ID")"
-[ -f "$REPORT" ] || block "write $REPORT (protocol §4). It lives in the main checkout; never commit it."
+[ -f "$REPORT" ] || block "write $REPORT (protocol §4). It lives outside the repo; never commit it."
 grep -qE '^Status:[[:space:]]*BLOCKED' "$REPORT" && exit 0
 [ -z "$(git status --porcelain --untracked-files=no)" ] || block "commit your changes."
 
