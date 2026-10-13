@@ -50,7 +50,12 @@ if is_supabase "$ROOT"; then
     step PREFLIGHT "supabase start" cap 600 supabase start -x "$ORCH_SUPABASE_EXCLUDE"
     NOTES+=("started the base supabase stack")
   fi
-  step PREFLIGHT "supabase migration up" cap 300 supabase migration up
+  if ! OUT="$(cap 300 supabase migration up 2>&1)"; then
+    printf '%s\n' "$OUT" >> "$LOG"
+    grep -q LegacyMigrationMissingLocalError <<< "$OUT" \
+      && die PREFLIGHT "the local database has migrations that are not on $ORCH_BASE (applied from another branch). Run 'supabase db reset' in $ROOT: it wipes local data and rebuilds from $ORCH_BASE's migrations and seed"
+    die PREFLIGHT "supabase migration up"
+  fi
 elif has_compose "$ROOT"; then
   command -v docker >/dev/null || die PREFLIGHT "docker not on PATH (repo has a compose file)"
   step PREFLIGHT "docker compose up" cap 300 docker compose up -d --wait
