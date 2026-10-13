@@ -1,10 +1,10 @@
 ---
 description: Prepare a concise PR and open it on GitHub against a base branch
-argument-hint: "[base-branch] (default: main)"
+argument-hint: "[base-branch] (default: main) [draft]"
 allowed-tools: Bash(git*), Bash(gh*)
 ---
 
-Open a pull request for the current branch against base `${1:-main}`.
+Open a pull request for the current branch against base `${1:-main}`. If the second argument is `draft`, open it as a draft.
 
 Context to gather first (run these, do not guess):
 
@@ -15,7 +15,7 @@ Context to gather first (run these, do not guess):
 - Push the branch if it has unpushed commits (`git status -sb`).
 
 Write the PR body to a temp file, then create with
-`gh pr create --base ${1:-main} --head <current-branch> --title "<title>" --body-file <tmp>`.
+`gh pr create --base ${1:-main} --head <current-branch> --title "<title>" --body-file <tmp>`, adding `--draft` when the second argument is `draft`.
 
 Title: conventional-commit style, include the ticket id if the branch name carries one (e.g. `tozn-332` → `(TOZN-332)`).
 
