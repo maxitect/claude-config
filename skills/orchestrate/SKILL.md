@@ -3,6 +3,8 @@ name: orchestrate
 description: Run one bounded orchestrator session over a folder of tickets. Builds ready tickets in parallel through ticket-implementer (Sonnet) and ticket-reviewer (Opus) agents in dependency order. Team mode (default) opens draft PRs, marks them ready for review once cleared and stacks dependents on them; solo mode merges cleared PRs into the base. Writes the handover for the next session. Runs its own preflight and refuses to start if it fails.
 argument-hint: "<ticket dir, e.g. docs/testing/tickets> [team|solo] [<tickets this session>]"
 disable-model-invocation: true
+model: opus
+allowed-tools: Bash(${CLAUDE_SKILL_DIR}/scripts/*)
 ---
 
 # Orchestrator
@@ -13,7 +15,7 @@ The block below is the preflight, then, only if preflight passed, the ticket sta
 
 If the block contains `PREFLIGHT FAIL`, show it to the user and stop. Do nothing else: no investigation, no fixes, no tool calls.
 
-!`("${CLAUDE_SKILL_DIR}/scripts/preflight.sh" $ARGUMENTS && "${CLAUDE_SKILL_DIR}/scripts/status.sh" && "${CLAUDE_SKILL_DIR}/scripts/handover.sh") || true`
+!`"${CLAUDE_SKILL_DIR}/scripts/session.sh" $ARGUMENTS`
 
 ## Role
 
@@ -25,7 +27,8 @@ References:
 
 - The ticket format, the agents' protocol and the report format are in [protocol.md](protocol.md). Read it only to settle a dispute; the agents carry it.
 - `<ticket dir>/orchestrate.env` holds the run's config (base branch, mode, parallelism, session size). The status header echoes it.
-- `<ticket dir>/INSTRUCTIONS.md`, when present, holds repo-specific rules for the agents: seed users, platform tools, what never to touch. Pass its relevant parts on in briefs only when the ticket needs them; the agents read it themselves.
+- `<ticket dir>/INSTRUCTIONS.md`, when present, holds repo-specific rules for the agents: seed users, platform tools, what never to touch. Pass its relevant parts on in briefs only when the ticket needs them; the agents read it themselves. Its section for the orchestrator, if any, lists duties you do yourself after a ticket lands (e.g. applying the report's markers to shared docs the isolated agents can't edit).
+- Reports are in `<state>/reports/<id>.md` (outside the repo, kept after merge).
 
 ## How dependencies run
 
@@ -57,7 +60,7 @@ Take the session's ticket count (the `session` figure in the status header: the 
    - Never launch a ticket that `waits on` another one.
 3. Spawn the implementer: `Agent` with `subagent_type: "ticket-implementer"` and `run_in_background: true`. The agent definition sets the model, the worktree and the protocol. The brief holds only:
    - the ticket's absolute path in the main checkout, and the mode (`setup.sh` works out the PR base and prints it);
-   - facts it needs from its dependencies' reports in `<ticket dir>/reports/` (contract changes, file locations, gotchas), plus relevant decisions from the handover;
+   - facts it needs from its dependencies' reports in `<state>/reports/` (contract changes, file locations, gotchas), plus relevant decisions from the handover;
    - for `HUMAN` tickets, an instruction to do every repo-side step and then hand back, so you can ask the user to do the human steps before verification continues.
 4. Spawn the reviewer when an implementer returns a PR: `subagent_type: "ticket-reviewer"`, with the PR URL, the ticket path, the mode, the PR's base branch and the worktree path. The reviewer replaces your own checks: don't re-run gates or ACs.
    - If the implementer reports `BLOCKED` or the reviewer reports `NOT CLEAR`, use `SendMessage` to continue the reviewer for unfinished fixes, or the implementer for missing scope. Escalate if it doesn't converge.
