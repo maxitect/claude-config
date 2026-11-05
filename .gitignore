@@ -62,7 +62,13 @@ todos/
 settings-glm.json
 settings.local.json
 policy-limits.json
+policy-limits.json.*
 remote-settings.json
+remote-settings.json.*
+
+# Harness runtime state
+state/
+skills/.trash/
 
 # Operating System Files
 .DS_Store
