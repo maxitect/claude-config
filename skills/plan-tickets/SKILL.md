@@ -40,11 +40,11 @@ Read-only throughout: never send, draft or label email, and never edit a Drive f
 
 For every spreadsheet line, find out what the code does today before deciding what to build. Fan out one read-only `Explore` agent per group of related lines (2–4 lines each), in parallel, each told to return file:line evidence of current state, gaps, blockers and bugs found on the way. Read their findings; spot-check anything a ticket will rest on.
 
-Things the reference run learned to look for:
+Things to look for:
 
 - **Security holes found while investigating** (RLS too open, leaked keys, open proxies) become separate `BUG` tickets outside the budget lines, flagged top priority, with a `> [!CAUTION]` callout. Don't hide them in a maintenance budget.
 - **Existing bugs next to the work** go in that ticket's deliverables as "Existing bug fixed while here" if they are small; otherwise their own `BUG` ticket.
-- **Data the client must supply** (category mappings, hierarchies, approvals) gets a `## Blocked on` section naming who supplies it and the exact format to ask for (for example "a CSV of `record_id` plus the four flags").
+- **Data the client must supply** (category mappings, hierarchies, approvals) gets a `## Blocked on` section naming who supplies it and the exact format to ask for (for example "a CSV of record IDs plus the required flags").
 - **Production may differ from the repo** (schema pulled from a dashboard, hand-deployed servers). Say so in the ticket and make "check production first" the first acceptance criterion.
 - **Reusable work in sibling projects.** Ask the user which other repos solved similar problems and point the ticket at the exact files.
 
@@ -53,7 +53,7 @@ Things the reference run learned to look for:
 Ask only what the sources and code can't answer, with `AskUserQuestion`, up to four questions per call, recommended option first. Put the evidence in the question so it stands alone. Typical questions:
 
 - Lines with 0 days or marked optional: skip, defer or ticket?
-- Non-dev lines: the reference run made handover real tickets, maintenance one holding ticket for logging time, and skipped optional extension months.
+- Non-dev lines: make handover real tickets, maintenance one holding ticket for logging time, and skip optional extension months.
 - How things work today when the repo can't tell (deploy method, hosting, who approves).
 - Where a technical choice is still open: **don't prescribe it**. If the user's answer is "not sure yet" or the right choice needs measurement (models, chunk sizes, libraries), make a spike ticket that compares options against real data, and write the follow-on tickets as "assumes the spike picks X; adjust after".
 
