@@ -14,6 +14,7 @@ pr-sweep ask 757 "why ..."   # ask that PR's reviewer session, print the answer
 pr-sweep open 757            # bring its stack back, print the interactive resume command
 pr-sweep teardown 757 [--full]
 
+pr-sweep --model fable ...   # any of the above: reviewer model, opus (default) or fable
 pr-sweep --glm ...           # any of the above: headless claudes run through settings-glm.json's
                              # env (the claude-glm alias), resume hints print claude-glm instead
 ```
@@ -52,6 +53,7 @@ so the repo's tsc/eslint never see the worktrees.
 | `PR_SWEEP_SUPABASE_EXCLUDE` | `studio,imgproxy,vector,logflare,supavisor` | containers not started per PR stack |
 | `PR_SWEEP_REVIEW_TIMEOUT` | 3600 | seconds per reviewer run |
 | `PR_SWEEP_GATE_TIMEOUT` | 900 | seconds per gate |
+| `PR_SWEEP_MODEL` | opus | reviewer model, `opus` or `fable` (what `--model` sets) |
 | `PR_SWEEP_CLAUDE_ENV` | unset | settings file whose `env` object is exported for every headless claude (what `--glm` sets) |
 
 ## Supabase isolation

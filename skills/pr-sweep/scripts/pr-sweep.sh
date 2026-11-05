@@ -13,9 +13,16 @@
 SCRIPTS="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
 # --glm: route every headless claude through settings-glm.json's env (the claude-glm alias)
+# --model opus|fable: model for the reviewer sessions (default opus)
 ARGS=()
-for a in "$@"; do
-  if [ "$a" = "--glm" ]; then export PR_SWEEP_CLAUDE_ENV="$HOME/.claude/settings-glm.json"; else ARGS+=("$a"); fi
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --glm) export PR_SWEEP_CLAUDE_ENV="$HOME/.claude/settings-glm.json" ;;
+    --model)
+      case "${2:-}" in opus|fable) export PR_SWEEP_MODEL="$2"; shift ;; *) echo "pr-sweep: --model takes opus or fable" >&2; exit 1 ;; esac ;;
+    *) ARGS+=("$1") ;;
+  esac
+  shift
 done
 set -- ${ARGS[@]+"${ARGS[@]}"}
 
