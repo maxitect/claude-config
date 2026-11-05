@@ -50,7 +50,7 @@ head = gh(f"repos/{slug}/pulls/{pr}")["head"]["sha"]
 if head != payload["commit_id"]:
     fail(f"head moved to {head[:7]} since the review of {payload['commit_id'][:7]}: re-run the sweep for it")
 
-review = gh(f"repos/{slug}/pulls/{pr}/reviews", "--method", "POST",
+review = gh(f"repos/{slug}/pulls/{pr}/reviews", "--method", "POST", "--input", "-",
             body={"commit_id": payload["commit_id"], "body": payload["body"]})
 if review["state"] != "PENDING":
     fail(f"review {review['id']} came back {review['state']}, expected PENDING")
