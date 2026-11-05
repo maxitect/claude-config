@@ -140,3 +140,7 @@ skills/synced/
 
 # If you want to version control plugins differently
 # plugins/
+
+# Python bytecode
+__pycache__/
+*.pyc
