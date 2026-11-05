@@ -47,6 +47,11 @@ Things to look for:
 - **Data the client must supply** (category mappings, hierarchies, approvals) gets a `## Blocked on` section naming who supplies it and the exact format to ask for (for example "a CSV of record IDs plus the required flags").
 - **Production may differ from the repo** (schema pulled from a dashboard, hand-deployed servers). Say so in the ticket and make "check production first" the first acceptance criterion.
 - **Reusable work in sibling projects.** Ask the user which other repos solved similar problems and point the ticket at the exact files.
+- **Real incidents behind a line** (an outage, a slow workshop, a support complaint) become the scenarios of a test ticket, with the date and the measured figures (CPU, connections, latency percentiles, error rate). A load or performance line starts with a ticket that reproduces the incident and records a baseline before any fix merges.
+- **Name the exact thing, with a count.** "All 14 public functions" followed by their names and `file:line`, "19 policies", "2 unindexed foreign keys". Run the repo's own linters or advisors statically against the migrations and list the expected hits in the ticket, then make the first deliverable or criterion run them against production.
+- **Facts come from the code and data as they are now**, not from an earlier doc, a note or memory. When a doc, the code and a count disagree, trust the code and say so in the ticket. A wrong figure in a ticket gets copied into every ticket that follows.
+- **Bugs found on the way, not only security ones.** Small unrelated defects (a wrong error message, redirects after sign-in, duplicate DOM ids) each get their own `BUG` ticket at 0.25 day, outside the budget lines. Number the bugs in the order found; file them first so they hold the lowest issue numbers.
+- **Point at the repo's own rules.** If the repo has database rules, an ADR folder, a review skill or lint skill, name the file in the ticket the implementer must follow (for example "following `docs/db/DATABASE.md` and the `db-lint` skill").
 
 ## 3. Ask, once, in batches
 
@@ -63,11 +68,25 @@ Questions only the client can answer go in the plan doc's open questions, not to
 
 **IDs and titles:** `<PROJECT>-<CODE>-<Txx-yy> <Title>`, keeping the spreadsheet line code (`PROJ-CODE-T02-01 Load test that reproduces the slowdowns`). Parent per spreadsheet line: `<PROJECT>-<CODE>-<Txx> <Line title>`. Bugs: `<PROJECT>-<CODE>-BUG-yy`. Titles say the outcome in plain words, not the mechanism. Ask the user for the project prefix if the repo has no earlier tickets that show it.
 
-**Estimates:** in days, in 0.25 steps. Children of a line add up to that line's budget. Work you think is needed but isn't budgeted goes in as its own ticket marked "over budget" in the plan table, never squeezed into another estimate. Nice-to-haves go in titled "(stretch)" or "(stretch, deprioritised)".
+**Estimates:** in days, in 0.25 steps. Children of a line add up to that line's budget. Work you think is needed but isn't budgeted goes in as its own ticket marked "over budget" in the plan table (`2 (+0.5 over)`), never squeezed into another estimate. Nice-to-haves go in titled "(stretch)" or "(stretch, deprioritised)". Before creating anything, add up each parent's children in a script and compare with the spreadsheet budget; fix any mismatch. A ticket's estimate line is `+N day(s).` (`N days (budget).` on a holding ticket); the parent's label is its budget and each child's is its estimate.
+
+**Dates:** only from the spreadsheet or a source that overrides it. A hard date (code freeze, go-live) goes in a `> [!IMPORTANT]` callout at the top of every ticket it binds. Work out whether each window fits (days of work against working days left) and say so in the plan doc.
+
+**Acceptance criteria that work** (see [examples.md](examples.md)):
+
+- Come in pairs where an action is forbidden: "user A cannot…" and "user A still can… on their own data".
+- Name the tool that proves it: `get_advisors` shows no warnings, the load test reproduces the slowdown, a fresh `db reset` applies cleanly.
+- For a change to something that may already be fixed or different in production, the first criterion is "check production first, or close as already fixed".
+- A test or measurement ticket proves itself first (it reproduces the problem), and its baseline is recorded before the fix it will judge.
+- Include the check that the happy path still works, on real pages or flows, not only the new behaviour.
+
+**Hand-offs to the client:** when data or a decision is needed, the ticket says who supplies what in which format, and the plan's open questions carry the same item, numbered and tagged with the ticket it blocks. When the budget depends on the client's unknowns, make one holding ticket with the budget and the questions; each agreed request becomes a sub-issue with its own estimate.
 
 **Body:** in the destination's format (see Destination). Acceptance criteria are checkable outcomes, each provable by a test or a stated manual check, and realistic at the data scale the client will have, not today's. For `repo`, give each criterion its verify method as the template asks, and number files `Tnnn-<slug>.md` after the highest existing id.
 
-**Parents:** short: which spreadsheet line, the goal in client words, budget, window, key deliverable, and "Work is in the sub-issues".
+**Parents:** short: which spreadsheet line, the goal in client words, budget, window, key deliverable, and "Work is in the sub-issues. Their estimates add up to the budget." Worked examples of each ticket kind (security bug, parent, test, spike, holding ticket) and the plan table are in [examples.md](examples.md).
+
+**Spikes:** a spike's deliverable is a decision and its evidence, not code to keep. Write the test set before running anything, split it into tuning and held-back sets, state what is out of scope, and name the write-up file. Everything downstream says "assumes the spike picks X".
 
 **Order:** work out dependencies across all tickets; they drive the `## Depends on` sections and the plan doc's suggested order.
 
@@ -99,6 +118,14 @@ Write `docs/plans/<code lower>/README.md` (or the repo's existing plan file, suc
 - Open questions for the client, numbered, each tagged with the ticket it blocks
 
 Commit it with the `commit` skill on a `docs/` branch. Don't commit the source spreadsheets or client documents.
+
+## When the client decides something later
+
+Tickets are living. When a client email, call or answer settles a question, edit the affected issue bodies in place (`gh issue edit`), date the decision and its source in the ticket ("The client chose X on 2 Nov 2026"), re-add the children to the budget, and update the plan doc: strike the question through with the answer and date, and change the table. A decision that shrinks a ticket (a spike cut to a check, a comparison dropped) also changes the estimates of the tickets around it; say where the days went.
+
+## Stop after planning
+
+This skill ends once the tickets exist, the plan doc is committed and the report is sent. Don't push, open a pull request, create implementation branches or start any ticket unless the user asks. Commit only with the `commit` skill.
 
 ## Report
 
