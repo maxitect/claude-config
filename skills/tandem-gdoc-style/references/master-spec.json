@@ -1,0 +1,62 @@
+{
+ "cover": {
+  "title": "[Client or product name]",
+  "subtitle": "[Document type, for example Fee Proposal]",
+  "lines": {
+   "Client": "[Client name]",
+   "Date": "[Month YYYY]",
+   "Status": "DRAFT",
+   "Author": "Tandem Creative Dev",
+   "Project number": "[XX-XXX]",
+   "Document number": "[XX-XXX-PXX]"
+  }
+ },
+ "blocks": [
+  ["h1", "Purpose"],
+  ["p", "[What this document is for and the conclusion the reader should reach, in two or three short paragraphs.]"],
+  ["h1", "Scope"],
+  ["p", "The table sets out what this proposal includes and what it leaves out."],
+  ["table", "scope"],
+  ["h1", "Deliverables"],
+  ["h2", "[Deliverable name]"],
+  ["p", "[What we do, the assumptions behind the estimate, the estimate in days and any contingency with the risk behind it.]"],
+  ["li", "[List item]"],
+  ["li", "[List item]"],
+  ["h1", "Decisions made"],
+  ["p", "[Where these were agreed.]"],
+  ["table", "decisions"],
+  ["h1", "Decisions needed"],
+  ["h2", "[Topic]"],
+  ["p", "[What we need, from whom, and by when.]"],
+  ["h1", "Commercial terms"],
+  ["p", "[Day rate and VAT statement.]"],
+  ["table", "costs"],
+  ["p", "This proposal is valid for 90 days from the date of issue."]
+ ],
+ "tables": {
+  "scope": {
+   "widths": [225.65, 225.65],
+   "rows": [
+    ["In scope", "Out of scope"],
+    ["✓ [Included item]", "✗ [Excluded item it pairs with]"],
+    ["✓ [Included item]", "✗ [Excluded item it pairs with]"]
+   ]
+  },
+  "decisions": {
+   "widths": [25, 426.3],
+   "rows": [
+    ["#", "Decision"],
+    ["1", "[Decision and where it was agreed]"]
+   ]
+  },
+  "costs": {
+   "widths": [271.3, 90, 90],
+   "total": true,
+   "rows": [
+    ["Item", "Days", "Cost"],
+    ["[Item]", "[0]", "[£0]"],
+    ["Total", "[0]", "[£0]"]
+   ]
+  }
+ }
+}
