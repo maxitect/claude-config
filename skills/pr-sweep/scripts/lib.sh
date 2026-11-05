@@ -119,9 +119,10 @@ release_slot() {
 
 # Flags shared by every headless reviewer invocation (first run, validation retry, ask.sh).
 reviewer_flags() {
-  local run="$1"
+  local run="$1" model
+  model="$(cat "$run/reviewer.model" 2>/dev/null)"   # a resumed session keeps the model it started with
   printf '%s\n' \
-    --agent pr-reviewer --model "${PR_SWEEP_MODEL:-opus}" --permission-mode dontAsk --add-dir "$run" "$HOME/.claude/skills" "$HOME/.claude/commands" \
-    --allowedTools "Read,Grep,Glob,Write,Edit,Bash(gh pr view*),Bash(gh pr diff*),Bash(gh issue view*),Bash(gh repo view*),Bash(git diff*),Bash(git log*),Bash(git show*),Bash(git status*),Bash(git blame*),Bash(cat*),Bash(grep*),Bash(ls*),Bash(find*),Bash(head*),Bash(tail*),Bash(wc*),Bash(sed -n*),Bash(curl*),Bash(jq*),Bash(lsof*),Bash(kill*),Bash(sleep*),Bash(pnpm*),Bash(npm*),Bash(npx*),Bash(yarn*),Bash(bun*),Bash(bunx*),Bash(node*),Bash(tsx*),Bash(python*),Bash(pytest*),Bash(mypy*),Bash(ruff*),Bash(poetry*),Bash(uv*),Bash(go*),Bash(cargo*),Bash(docker ps*),Bash(docker logs*),Bash(psql*),Bash(supabase status*),Bash(supabase db lint*),Bash(supabase db advisors*),Bash(supabase gen types*),Bash(supabase migration list*),mcp__playwright,mcp__plugin_playwright_playwright,mcp__claude_ai_monday_com,mcp__claude_ai_Atlassian_Rovo,mcp__claude_ai_Linear,mcp__claude_ai_Google_Drive" \
-    --disallowedTools "Bash(git push*),Bash(git commit*),Bash(gh pr review*),Bash(gh pr comment*),Bash(gh pr merge*),Bash(gh pr close*),Bash(gh pr edit*),Bash(gh pr ready*),Bash(gh issue comment*),Bash(gh issue edit*),Bash(supabase stop*),Bash(supabase start*),Bash(supabase db reset*),Bash(supabase db push*),Bash(supabase link*),mcp__supabase"
+    --agent pr-reviewer --model "${model:-${PR_SWEEP_MODEL:-opus}}" --permission-mode dontAsk --add-dir "$run" "$HOME/.claude/skills" "$HOME/.claude/commands" \
+    --allowedTools "Read,Grep,Glob,Write,Edit,Bash(gh pr view*),Bash(gh pr diff*),Bash(gh issue view*),Bash(gh repo view*),Bash(git diff*),Bash(git log*),Bash(git show*),Bash(git status*),Bash(git blame*),Bash(cat*),Bash(grep*),Bash(ls*),Bash(find*),Bash(head*),Bash(tail*),Bash(wc*),Bash(sed -n*),Bash(curl*),Bash(jq*),Bash(lsof*),Bash(kill*),Bash(sleep*),Bash(pnpm*),Bash(npm*),Bash(npx*),Bash(yarn*),Bash(bun*),Bash(bunx*),Bash(node*),Bash(tsx*),Bash(python*),Bash(pytest*),Bash(mypy*),Bash(ruff*),Bash(poetry*),Bash(uv*),Bash(go*),Bash(cargo*),Bash(docker ps*),Bash(docker logs*),Bash(psql*),Bash(supabase*),mcp__playwright,mcp__plugin_playwright_playwright,mcp__claude_ai_monday_com,mcp__claude_ai_Atlassian_Rovo,mcp__claude_ai_Linear,mcp__claude_ai_Google_Drive" \
+    --disallowedTools "Bash(git push*),Bash(git commit*),Bash(gh pr review*),Bash(gh pr comment*),Bash(gh pr merge*),Bash(gh pr close*),Bash(gh pr edit*),Bash(gh pr ready*),Bash(gh issue comment*),Bash(gh issue edit*),mcp__supabase"
 }

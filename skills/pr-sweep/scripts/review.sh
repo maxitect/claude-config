@@ -12,6 +12,8 @@ LOG="$RUN/review.log"
 SHA="$(meta "$N" .sha)"
 [ "$(cat "$RUN/prepare.ok" 2>/dev/null)" = "$SHA" ] || die REVIEW "#$N not prepared at $SHA: run prepare.sh $N"
 
+[ "${2:-}" = "--fix" ] || echo "${PR_SWEEP_MODEL:-opus}" > "$RUN/reviewer.model"   # new session: --model applies
+
 FLAGS=()
 while IFS= read -r f; do FLAGS+=("$f"); done < <(reviewer_flags "$RUN")
 SCHEMA="$(cat "$SCRIPTS/findings.schema.json")"

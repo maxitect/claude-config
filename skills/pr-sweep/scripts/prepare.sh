@@ -140,7 +140,7 @@ fi
   echo "concurrently on their own ports: never use the defaults. Kill your servers before you finish."
   if [ "$MIG" = "true" ]; then
     echo "Database: this PR's own Supabase stack (slot $SLOT), fresh from its migrations and seed. DB_URL=$DB_URL"
-    echo "It is yours alone: write whatever rows a probe needs."
+    echo "It is yours alone: write whatever rows a probe needs, and \`supabase db reset\` (from your cwd) rebuilds it from the migrations and seed when a probe leaves it dirty or you change a migration."
   elif [ -n "$DB_URL" ]; then
     echo "Database: the SHARED base Supabase stack (this PR changes no schema). DB_URL=$DB_URL"
     echo "Other reviewers use it concurrently. Wrap every probe that writes in BEGIN; ... ROLLBACK; and never create users or rows outside one."
