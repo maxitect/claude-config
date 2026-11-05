@@ -15,7 +15,7 @@ Use this skill when writing any PostgreSQL trigger function or migration that in
 | ----------------------------------------- | --------- | ---------------------------------------------------- |
 | Called only from a trigger                | `public`  | Fine; just revoke after creating                     |
 | Called only from RLS policies             | `private` | PostgREST doesn't expose `private`; no REVOKE needed |
-| Called via `supabase.rpc()` from app code | `public`  | Must stay exposed; grant to `authenticated` only     |
+| Called via `supabase.rpc()` from app code | `private` body + `public` wrapper | Definer body in `private`, `SECURITY INVOKER` wrapper in `public` (see §6) |
 
 **The `private` schema already exists in this project.** For RLS helpers, the migration pattern is:
 
@@ -114,13 +114,34 @@ Apply this pattern to **every** new `public` trigger function. Existing function
 
 ## 6. Action functions (callable via RPC)
 
-Functions intentionally called via `supabase.rpc()` stay in `public` but should only be callable by authenticated users:
+A function the app calls via `supabase.rpc()` that needs `SECURITY DEFINER` must NOT live in `public` with EXECUTE granted to `anon`/`authenticated`: that trips advisor lints 0028 (`anon_security_definer_function_executable`) and 0029 (`authenticated_security_definer_function_executable`). Put the definer body in `private` (not exposed by PostgREST) and leave a `SECURITY INVOKER` SQL wrapper with the same name and signature in `public`, so the app's `rpc()` call is unchanged:
 
 ```sql
-REVOKE EXECUTE ON FUNCTION public.my_action(uuid, uuid) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.my_action(uuid, uuid) FROM anon;
-GRANT  EXECUTE ON FUNCTION public.my_action(uuid, uuid) TO authenticated;
+CREATE OR REPLACE FUNCTION private.my_action(p_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- caller from auth.uid(), never a parameter
+  ...
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION private.my_action(uuid) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION private.my_action(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.my_action(p_id uuid)
+RETURNS jsonb
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path TO ''
+AS $$ SELECT private.my_action(p_id) $$;
+REVOKE EXECUTE ON FUNCTION public.my_action(uuid) FROM PUBLIC, anon, authenticated;
+GRANT  EXECUTE ON FUNCTION public.my_action(uuid) TO authenticated;
 ```
+
+The caller needs EXECUTE on both. Grant `anon` on both only when signed-out callers are intended. An existing public definer function can be moved with `ALTER FUNCTION public.x(...) SET SCHEMA private;` before creating the wrapper.
 
 ---
 
@@ -175,12 +196,34 @@ REVOKE EXECUTE ON FUNCTION public.trg_item_added() FROM anon, authenticated;
 
 ---
 
-## 9. After writing — verify
+## 9. After writing — lint and verify
 
-```sql
--- Should return false for both
-SELECT has_function_privilege('anon',          'public.trg_<name>()', 'execute');
-SELECT has_function_privilege('authenticated', 'public.trg_<name>()', 'execute');
+Take a baseline before applying the migration and compare after, so only new findings are attributed to it. Run all of these against the local stack:
+
+```bash
+# 1. Advisors (security and performance). Use the local Studio endpoint: it runs the
+#    full current lint set, while `supabase db advisors` in an older CLI misses lints
+#    such as 0028/0029. Nothing above INFO should be new.
+curl -s http://127.0.0.1:54323/api/platform/projects/default/run-lints \
+  | jq -r '.[] | select(.level != "INFO") | "\(.level) \(.name): \(.detail)"'
+
+# 2. plpgsql linter: type errors and references to renamed or dropped columns
+#    inside function bodies, which the advisors do not check.
+supabase db lint --local --schema public --level warning
+
+# 3. The pgTAP suite, if the project has one (supabase/tests/).
+supabase test db --local
 ```
 
-Do not run any supabase commands to reset or migrate, advise the user to do so and to check local advisor or run the SQL above in Supabase Studio.
+```sql
+-- 4. Trigger functions are not executable by client roles (both should be false)
+SELECT has_function_privilege('anon',          'public.trg_<name>()', 'execute');
+SELECT has_function_privilege('authenticated', 'public.trg_<name>()', 'execute');
+
+-- 5. No SECURITY DEFINER function in public is executable by anon or authenticated
+SELECT p.oid::regprocedure FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND p.prosecdef
+  AND (has_function_privilege('anon', p.oid, 'execute') OR has_function_privilege('authenticated', p.oid, 'execute'));
+```
+
+A new warning or error from any of these is fixed in the same migration before the work is called done. Apply migrations only to the local stack (`supabase migration up` or `supabase db reset`); never push to a hosted project from this skill.
