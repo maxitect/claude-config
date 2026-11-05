@@ -15,6 +15,7 @@ gh pr view "$N" --repo "$SLUG" --json body -q .body > "$RUN/pr-body.md" || die C
 INPUT="$(jq -n --slurpfile m "$RUN/meta.json" --slurpfile f "$RUN/findings.json" --slurpfile a "$RUN/anchors.json" '
   {pr: ($m[0] | {number, title, url}),
    reviewer_summary: $f[0].summary,
+   reviewer_notes: ($f[0].notes // ""),
    issue_coverage: $f[0].issue_coverage,
    findings: [$f[0].findings[] | . + {anchor: $a[0][.id].kind, has_suggestion: ($a[0][.id].suggestion != null)}]}')"
 

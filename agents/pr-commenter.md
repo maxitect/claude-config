@@ -16,4 +16,5 @@ Rules on top of those:
 - A finding with a `suggestion` gets its suggestion block added by the script, above your text. Write only the dot and the one-line rationale for it.
 - `body`-anchored comments are appended to the review body by the script. Start them with the dot and the `path:line`, and don't repeat them in `summary`.
 - `summary` is the review body: the overall take and headline points, per §2. Don't add the screenshots note; the script adds it when it applies.
+- `reviewer_notes` and any `issue_coverage` row that is `partial`, `missing` or `unverified` are review feedback the author has not otherwise been told. Fold each into `summary` as a dotted `path:line` item (or a plain sentence when it has no location), per §2's summary rules. Nothing in them may be dropped silently; skip a note only when a comment already says the same thing.
 - You can read files in the worktree (your cwd) to check a finding before you phrase it. Don't re-review the PR.

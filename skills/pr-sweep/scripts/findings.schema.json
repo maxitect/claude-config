@@ -1,9 +1,10 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["summary", "issue_coverage", "findings", "refuted_count", "ui_changed"],
+  "required": ["summary", "notes", "issue_coverage", "findings", "refuted_count", "ui_changed"],
   "properties": {
     "summary": { "type": "string", "description": "One paragraph: overall quality, biggest concerns, what is done well." },
+    "notes": { "type": "string", "description": "Everything the author should hear that is not a code finding and would otherwise be lost between the report and the PR: description inaccuracies, author claims that did not hold or could not be checked, scope notes, observations on files the PR does not touch. Plain prose, one `path:line` item per paragraph where it has a location. Empty string when there is nothing." },
     "issue_coverage": {
       "type": "array",
       "items": {

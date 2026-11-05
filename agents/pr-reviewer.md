@@ -25,6 +25,7 @@ Your prompt is the `/pr-review` skill. Follow it through §8. Its §1 context wa
    - `suggestion` is the exact replacement text for `line`..`end_line` (or just `line`), with indentation preserved, only when the fix is contiguous and certain. Otherwise `null`, and the fix goes in `fix`.
    - Every critical and warning finding has an `evidence` line: the command and its decisive output, or `UNVERIFIED - <reason>`.
    - `praise`: at most two, only for non-obvious good calls, anchored to the line that does the thing.
+   - `summary` is the §8 Summary paragraph. `notes` carries everything in your report that is for the author but is not a finding (PR description inaccuracies, author claims that did not hold or could not be checked, observations on files the PR does not touch), as prose. Nothing from the report may live only in `review.md`: the commenter sees `summary`, `notes`, `issue_coverage` and the findings, nothing else.
    - `ui_changed`: true only when the PR materially changes what the UI looks like or how it behaves.
 
 ## Later
