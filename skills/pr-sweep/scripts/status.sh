@@ -17,6 +17,7 @@ for dir in "$SWEEP"/[0-9]*/; do
   [ "$stage" = validated ] && [ -f "$r/payload.json" ] && stage="commented"
   [ "$(jq -r .sha "$r/posted.json" 2>/dev/null)" = "$sha" ] && stage="posted $(jq -r .url "$r/posted.json")"
   [ -f "$r/failed" ] && stage="FAILED at $(cat "$r/failed") ($stage)"
+  [ -f "$r/followup.verdict" ] && stage="$stage · followup@$(cut -c1-7 "$r/followup.sha") $(cat "$r/followup.verdict")$([ "$(jq -r .sha "$r/posted.json" 2>/dev/null)" = "$(cat "$r/followup.sha")" ] && echo " · pending review: $(jq -r .url "$r/posted.json")")"
   slot="$(slot_of "$n")"
   sid="$(cat "$r/reviewer.sid" 2>/dev/null)"
   echo "#$n ${sha:0:7} $stage${slot:+ · slot $slot}${sid:+ · resume: cd $r/wt && $CLAUDE_HINT --resume $sid}"

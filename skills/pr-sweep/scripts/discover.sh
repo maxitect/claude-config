@@ -7,7 +7,7 @@
 #
 # Skipped always: PRs where I already hold a pending review (GitHub allows one per user per PR), and PRs
 # whose current head I already reviewed, by a sweep or by hand. A head that moved since my last review is
-# queued as a re-review. Skipped unless named: drafts, my own PRs, PRs from forks, PRs labelled no-ai-review.
+# queued as a followup (resume its sweep session) when the worktree and session still exist, else as a re-review. Skipped unless named: drafts, my own PRs, PRs from forks, PRs labelled no-ai-review.
 
 . "$(dirname "$0")/lib.sh"
 [ -n "$SLUG" ] || die DISCOVER "gh cannot resolve a GitHub repo here"

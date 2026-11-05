@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One PR end to end: prepare -> review -> validate -> comment -> post, then frees its stack. Each stage is
+# One PR end to end (a PR already reviewed by a sweep gets followup.sh instead): prepare -> review -> validate -> comment -> post, then frees its stack. Each stage is
 # skipped when its output already exists for the current head, so re-running after a failure resumes.
 #
 # Usage: run.sh <pr>
@@ -13,8 +13,9 @@ rm -f "$RUN/failed"
 
 # Head moved since the last sweep: archive the old head's artefacts, keep sessions.log for resuming.
 QUEUED="$(jq -r ".[] | select(.number==$N) | .sha" "$SWEEP/queue.json" 2>/dev/null)"
+MODE="$(jq -r ".[] | select(.number==$N) | .mode // \"review\"" "$SWEEP/queue.json" 2>/dev/null)"
 OLD="$(cat "$RUN/prepare.ok" 2>/dev/null)"
-if [ -n "$OLD" ] && [ -n "$QUEUED" ] && [ "$OLD" != "$QUEUED" ]; then
+if [ "$MODE" != followup ] && [ -n "$OLD" ] && [ -n "$QUEUED" ] && [ "$OLD" != "$QUEUED" ]; then
   mkdir -p "$RUN/history/${OLD:0:7}"
   for f in prepare.ok context.md findings.json findings.sha review.json review.md anchors.json comments.json \
            commenter.json payload.json posted.json "pr-$N-review.md"; do
@@ -31,6 +32,13 @@ stage() {
     exit 1
   fi
 }
+
+if [ "$MODE" = followup ]; then
+  stage followup "$SCRIPTS/followup.sh" "$N"
+  "$SCRIPTS/teardown.sh" "$N" >/dev/null
+  echo "RUN PASS #$N followup $(cat "$RUN/followup.verdict") · report $RUN/followup.md · resume: cd $WT && $CLAUDE_HINT --resume $(cat "$RUN/reviewer.sid")"
+  exit 0
+fi
 
 SHA="${QUEUED:-$(jq -r .sha "$RUN/meta.json" 2>/dev/null)}"
 prepared() {

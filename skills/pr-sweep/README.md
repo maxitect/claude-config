@@ -6,7 +6,9 @@ everything, aliased in `~/.zshrc`.
 ## Usage
 
 ```
-pr-sweep                     # every open, non-draft PR not authored by me and not already reviewed at its head
+pr-sweep                     # every open, non-draft PR not authored by me and not already reviewed at its head;
+                             # a PR whose review I submitted and whose head moved, with its worktree + session
+                             # still here, gets /pr-followup in that same session instead of a fresh review
 pr-sweep mine                # only PRs assigned to me
 pr-sweep 757 754             # exactly these PRs (draft/author/fork filters off); also resumes failed runs
 pr-sweep status              # furthest stage per PR, resume commands
@@ -36,6 +38,7 @@ run.sh <n>              per PR, launched by pr-sweep.sh, max 4 in flight (PR_SWE
                         fail -> review.sh --fix (same session) once
   comment.sh <n>        claude -p --agent pr-commenter (Sonnet) -> comments.json; assemble.py -> payload.json
   post.py               REST pending review (no event) + GraphQL threads; rejected threads demoted to body
+  (followup mode, see below: followup.sh <n> replaces prepare..post)
   teardown.sh <n>       stop own stack, release slot, keep worktree + sessions
 open.sh <n> / ask.sh <n> "q"   bring the stack back, resume the reviewer (interactive / headless)
 status.sh               furthest stage per PR, slots, resume commands
@@ -43,6 +46,17 @@ status.sh               furthest stage per PR, slots, resume commands
 
 Everything lives in `~/pr-sweep/<owner>__<repo>/` (`PR_SWEEP_HOME` overrides). Not a dot-folder on purpose: tsc's include globs skip files under a dot-directory, so typecheck fails in worktrees there. Nothing is written inside the repo,
 so the repo's tsc/eslint never see the worktrees.
+
+## Followup
+
+`discover.py` tags each queued PR `mode`: `followup` when I have a submitted review on it, its head moved, and
+`<state>/<n>/reviewer.sid` + `wt/` still exist; otherwise `review` (fresh `/pr-review`, a re-review if I reviewed
+before). `followup.sh` fetches the head, moves the worktree to it (keeps the session, no archive), brings the own
+stack back for MIG PRs, reinstalls, pre-fetches my reviews/threads/comments to `followup-input.json` (the reviewer
+still has no `gh api`), and resumes the same session headless with `/pr-followup <n>`. Output: `followup.md`,
+`followup.verdict`, `followup.sha`; `status` shows the verdict. A resumed session (followup, ask, --fix) keeps the model it started with, stored in `reviewer.model`; `--model` only applies to new sessions. Nothing is posted. A head already followed up is
+skipped. Resume interactively with the usual `cd wt && claude --resume <sid>`. To force a fresh review instead:
+`pr-sweep teardown <n> --full`, then re-run. A PR that newly touches migrations since its review fails followup the same way.
 
 ## Knobs (env)
 
