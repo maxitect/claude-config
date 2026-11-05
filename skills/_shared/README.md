@@ -74,6 +74,9 @@ Ticket fragments differ: `ticket-github.md` is the _fallback_ text for when no i
 normal path. A new tracker whose API bash can reach should follow the GitHub shape (fetch and inject); one
 behind an MCP should follow the Monday/Jira/Linear shape (render the lookup path).
 
+Repo fragments (`fragments/repo-<origin repo name>.md`, rendered after the stack fragments) carry one repo's private rules,
+so they are gitignored and live only on the machine that reviews that repo.
+
 ## Database block
 
 Fires only when the stack is Supabase **and** the diff touches `supabase/migrations/`. In order: locate

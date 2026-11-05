@@ -144,3 +144,6 @@ skills/synced/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Repo-specific review rules (private)
+skills/_shared/fragments/repo-*.md
