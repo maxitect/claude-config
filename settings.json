@@ -2,7 +2,21 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "model": "opus",
+  "model": "fable",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-skill-gate.zsh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/hooks/commit-skill-gate.zsh\"; \"$f\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "statusLine": {
     "type": "command",
     "command": "sh ~/.claude/statusline-command.sh"
@@ -21,7 +35,13 @@
     "pyright-lsp@claude-plugins-official": true,
     "i-have-adhd@i-have-adhd": true,
     "vercel@anthropic-plugin-directory": true,
-    "neon@anthropic-plugin-directory": true
+    "neon@anthropic-plugin-directory": true,
+    "netlify@anthropic-plugin-directory": true,
+    "docker-skills@anthropic-plugin-directory": true,
+    "resend@anthropic-plugin-directory": true,
+    "notion@anthropic-plugin-directory": true,
+    "cloudflare@claude-plugins-official": true,
+    "roadmap@goblin-mode": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
@@ -41,9 +61,29 @@
         "source": "git",
         "url": "https://github.com/ayghri/i-have-adhd.git"
       }
+    },
+    "goblin-mode": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/JasonWarrenUK/goblin-mode.git"
+      }
     }
   },
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
-  "skipAutoPermissionPrompt": true
+  "idleCompaction": false,
+  "skipAutoPermissionPrompt": true,
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Bash(poetry run poe test:*)",
+      "Bash(poetry run poe lint:*)",
+      "Bash(poetry run poe fmt:*)"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Bash(psql:* DROP*)",
+      "Bash(supabase db reset:*)"
+    ]
+  }
 }
