@@ -14,6 +14,10 @@ Split staged/pending changes into multiple commits by concern — never one gian
 - A 10-file feature is normally 5-10 commits, not 1
 - Group by "what would I revert independently" — if two changes must always revert together, they're one commit
 
+## Committing
+
+Run every commit as `COMMIT_VIA_SKILL=1 git commit ...` — the PreToolUse gate blocks bare `git commit` outside this skill.
+
 ## Format
 
 `<type>(<scope>): <imperative summary>`
