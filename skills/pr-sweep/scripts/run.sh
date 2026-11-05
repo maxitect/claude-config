@@ -33,12 +33,7 @@ stage() {
   fi
 }
 
-if [ "$MODE" = followup ]; then
-  stage followup "$SCRIPTS/followup.sh" "$N"
-  "$SCRIPTS/teardown.sh" "$N" >/dev/null
-  echo "RUN PASS #$N followup $(cat "$RUN/followup.verdict") · report $RUN/followup.md · resume: cd $WT && $CLAUDE_HINT --resume $(cat "$RUN/reviewer.sid")"
-  exit 0
-fi
+[ "$MODE" != followup ] || stage followup "$SCRIPTS/followup.sh" "$N"   # then the normal stages below run at the new head
 
 SHA="${QUEUED:-$(jq -r .sha "$RUN/meta.json" 2>/dev/null)}"
 prepared() {
@@ -66,4 +61,5 @@ fi
 stage post python3 "$SCRIPTS/post.py" "$RUN" "$SLUG" "$N"
 "$SCRIPTS/teardown.sh" "$N" >/dev/null
 
-echo "RUN PASS #$N $(jq -r .url "$RUN/posted.json") · report $RUN/review.md · resume: cd $WT && $CLAUDE_HINT --resume $(cat "$RUN/reviewer.sid")"
+FV=""; [ "$(cat "$RUN/followup.sha" 2>/dev/null)" = "$SHA" ] && FV=" followup $(cat "$RUN/followup.verdict")"
+echo "RUN PASS #$N$FV $(jq -r .url "$RUN/posted.json") · report $RUN/review.md · resume: cd $WT && $CLAUDE_HINT --resume $(cat "$RUN/reviewer.sid")"

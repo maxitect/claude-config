@@ -50,13 +50,20 @@ so the repo's tsc/eslint never see the worktrees.
 ## Followup
 
 `discover.py` tags each queued PR `mode`: `followup` when I have a submitted review on it, its head moved, and
-`<state>/<n>/reviewer.sid` + `wt/` still exist; otherwise `review` (fresh `/pr-review`, a re-review if I reviewed
-before). `followup.sh` fetches the head, moves the worktree to it (keeps the session, no archive), brings the own
-stack back for MIG PRs, reinstalls, pre-fetches my reviews/threads/comments to `followup-input.json` (the reviewer
-still has no `gh api`), and resumes the same session headless with `/pr-followup <n>`. Output: `followup.md`,
-`followup.verdict`, `followup.sha`; `status` shows the verdict. A resumed session (followup, ask, --fix) keeps the model it started with, stored in `reviewer.model`; `--model` only applies to new sessions. Nothing is posted. A head already followed up is
-skipped. Resume interactively with the usual `cd wt && claude --resume <sid>`. To force a fresh review instead:
-`pr-sweep teardown <n> --full`, then re-run. A PR that newly touches migrations since its review fails followup the same way.
+`<state>/<n>/reviewer.sid` + `wt/` still exist (and that head is not already followed up); otherwise `review`
+(fresh `/pr-review`, a re-review if I reviewed before). `run.sh` runs `followup.sh` first for a followup:
+
+1. fetch the head, move the worktree to it (session kept), bring the own stack back for MIG PRs, reinstall;
+2. pre-fetch my reviews/threads/comments to `followup-input.json` (the reviewer still has no `gh api`);
+3. resume the same session headless with `/pr-followup <n>` -> `followup.md` (verdict first), `followup.verdict`;
+4. archive the old review's artefacts to `history/<sha7>/`, point `meta.json` at the new head, and resume the same
+   session once more (`review.sh --prompt`) for the still-open items as findings in the normal schema.
+
+Then the normal stages run at the new head: validate, comment (summary body + inline threads, same commenter),
+post a PENDING review. `status` shows the verdict beside the pending review. Resume interactively with the usual
+`cd wt && claude --resume <sid>`. A failure after step 4 resumes at validate/comment/post like any run. To force a
+fresh review instead: `pr-sweep teardown <n> --full`, then re-run. A PR that newly touches migrations since its
+review fails followup the same way.
 
 ## Knobs (env)
 

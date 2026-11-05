@@ -3,6 +3,7 @@
 #
 # Usage: review.sh <pr>                 fresh review session (needs prepare.sh first)
 #        review.sh <pr> --fix <file>    resume the same session with validator errors from <file>
+#        review.sh <pr> --prompt <file> resume the same session with <file> as the prompt (followup findings)
 # Writes $SWEEP/<pr>/{reviewer.sid,review.json,findings.json}; the reviewer writes review.md itself.
 
 . "$(dirname "$0")/lib.sh"
@@ -12,7 +13,7 @@ LOG="$RUN/review.log"
 SHA="$(meta "$N" .sha)"
 [ "$(cat "$RUN/prepare.ok" 2>/dev/null)" = "$SHA" ] || die REVIEW "#$N not prepared at $SHA: run prepare.sh $N"
 
-[ "${2:-}" = "--fix" ] || echo "${PR_SWEEP_MODEL:-opus}" > "$RUN/reviewer.model"   # new session: --model applies
+case "${2:-}" in --fix|--prompt) ;; *) echo "${PR_SWEEP_MODEL:-opus}" > "$RUN/reviewer.model" ;; esac   # new session: --model applies
 
 FLAGS=()
 while IFS= read -r f; do FLAGS+=("$f"); done < <(reviewer_flags "$RUN")
@@ -24,6 +25,10 @@ if [ "${2:-}" = "--fix" ]; then
   PROMPT="The validator rejected your findings JSON. Fix exactly these problems and return the complete corrected JSON:
 
 $(cat "${3:?--fix needs a file}")"
+elif [ "${2:-}" = "--prompt" ]; then
+  SID="$(cat "$RUN/reviewer.sid")"
+  SESSION=(--resume "$SID")
+  PROMPT="$(cat "${3:?--prompt needs a file}")"
 else
   rm -f "$RUN/anchors.json" "$RUN/comments.json" "$RUN/payload.json"
   SID="$(uuidgen | tr '[:upper:]' '[:lower:]')"

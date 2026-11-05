@@ -31,8 +31,6 @@ def skip_reason(pr, posted, mine):
         return "already reviewed at this head by a sweep"
     if mine.get("reviewed_sha") == pr["headRefOid"]:
         return "you already reviewed this head"
-    if read(pr["number"], "followup.sha") == pr["headRefOid"]:
-        return "already followed up at this head"
     if explicit:
         return None
     if pr["isDraft"]:
@@ -63,7 +61,7 @@ for pr in sorted(prs, key=lambda p: p["number"]):
         continue
     mig = touches_schema(pr)
     rereview = posted is not None or mine.get("reviewed_sha") is not None
-    followup = mine.get("reviewed_sha") is not None and has_session(n)
+    followup = mine.get("reviewed_sha") is not None and has_session(n) and read(n, "followup.sha") != pr["headRefOid"]
     queue.append({
         "number": n, "title": title, "url": pr["url"], "sha": pr["headRefOid"],
         "head": pr["headRefName"], "base": pr["baseRefName"], "mig": mig, "rereview": rereview,

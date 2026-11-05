@@ -79,25 +79,27 @@ rm -f "$RUN/followup.notes"
 jq -r '.result // empty' "$RUN/followup.json" > "$RUN/followup.md" 2>/dev/null
 VERDICT="$(head -5 "$RUN/followup.md" | grep -m1 -oE 'DO NOT APPROVE|APPROVE')"
 [ -n "$VERDICT" ] || die FOLLOWUP "#$N report has no verdict line (see $RUN/followup.json)"
-echo "$SHA" > "$RUN/followup.sha"
-echo "$VERDICT" > "$RUN/followup.verdict"
 COST="$(jq -r '.total_cost_usd // 0 | . * 100 | round / 100' "$RUN/followup.json")"
 
-# The summary comment: the commenter turns the report into the body of a PENDING review for me to edit and submit.
+# From here the PR is a normal sweep at its new head: archive the old review's artefacts, then ask the same
+# session for the open items as findings, and let run.sh validate, comment (summary + inline) and post them.
 OLD="$(meta "$N" .sha)"
 mkdir -p "$RUN/history/${OLD:0:7}"
-for f in payload.json posted.json "pr-$N-review.md"; do [ -e "$RUN/$f" ] && mv "$RUN/$f" "$RUN/history/${OLD:0:7}/"; done
-CSID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
-echo "$CSID" > "$RUN/followup-commenter.sid"
-cap 900 claude -p --session-id "$CSID" --name "pr-$N followup summary" \
-  --agent pr-commenter --model sonnet --permission-mode dontAsk --add-dir "$HOME/.claude/commands" --allowedTools "Read,Grep,Glob" \
-  --output-format json --json-schema "$(cat "$SCRIPTS/comments.schema.json")" \
-  "Write the body of a FOLLOW-UP review per your protocol, with no inline comments: return \`comments\` as an empty array and put everything in \`summary\`.
-Source: the follow-up report below, written after the dev responded to my earlier review. Cover, in my voice and for the dev: each of my points that is still open, claimed but not done, or declined with a reason that does not hold (dotted \`path:line\` item each, with the fix); anything new the response commits introduced; one short line for what was addressed. Do not state the verdict word or report process. Do not restate items that are fine one by one.
+for f in findings.json findings.sha review.json review.md anchors.json comments.json commenter.json payload.json posted.json "pr-$N-review.md"; do
+  [ -e "$RUN/$f" ] && mv "$RUN/$f" "$RUN/history/${OLD:0:7}/"
+done
+jq --arg sha "$SHA" '.sha = $sha' "$RUN/meta.json" > "$RUN/meta.json.new" && mv "$RUN/meta.json.new" "$RUN/meta.json"
+echo "$SHA" > "$RUN/prepare.ok"
 
-$(cat "$RUN/followup.md")" < /dev/null >> "$RUN/followup-comment.log" 2>&1
-BODY="$(grep '^{' "$RUN/followup-comment.log" | tail -1 | jq -r '.structured_output.summary // empty' | sed -E 's/ *— */ - /g')"
-[ -n "$BODY" ] || die FOLLOWUP "#$N commenter returned no summary (log: $RUN/followup-comment.log)"
-jq -n --arg sha "$SHA" --arg body "$BODY" '{commit_id: $sha, body: $body, threads: []}' > "$RUN/payload.json"
-python3 "$SCRIPTS/post.py" "$RUN" "$SLUG" "$N" || exit 1
-echo "FOLLOWUP PASS #$N $VERDICT (\$$COST) · summary comment in pending review, report $RUN/followup.md"
+cat > "$RUN/followup-prompt.md" <<EOF2
+Now return the findings for the follow-up review, as the JSON the schema asks for, from the report you just wrote.
+
+- Every point in your report that asks the dev to change something is a finding, whatever the report called it: my points still open, claimed but not done, or declined with a reason that does not hold; anything new the response commits introduced; and defects you found that were never in my submitted review (including ones your report marked "not blocking"). One finding each, anchored to its line. Nothing already fixed, no praise.
+- Same rules as the first review: \`line\` is the line in the PR head version (side RIGHT), \`suggestion\` only when the fix is contiguous and certain, an \`evidence\` line on every critical and warning (the command and its decisive output, or UNVERIFIED with the reason).
+- \`summary\`: what the dev's response did (what was addressed, what is left). \`notes\`: only what is not a code change (a description inaccuracy, a scope remark); never a defect, which belongs in \`findings\`.
+- \`issue_coverage\`, \`refuted_count\` and \`ui_changed\` as for a full review; an empty \`findings\` array is right when nothing is outstanding.
+EOF2
+"$SCRIPTS/review.sh" "$N" --prompt "$RUN/followup-prompt.md" || exit 1
+echo "$SHA" > "$RUN/followup.sha"
+echo "$VERDICT" > "$RUN/followup.verdict"
+echo "FOLLOWUP PASS #$N $VERDICT (\$$COST)"
