@@ -198,13 +198,22 @@ Vibe-coding / over-engineering signs, regardless of stack:
 
 ---
 
-## 7. Verify Every Finding
+## 7. Verify Every Finding — and the Change Itself
 
 A finding you have not reproduced is a hypothesis. A review pass produces genuine catches and confident
 fabrications in the same breath, and on the page they read identically — the only thing separating them is a
 command with output. Run one for every finding the stack can settle.
 
-### Use the environment if it's already up
+**Reading code is not a probe.** Rereading the diff, tracing a call path by eye or reasoning about what a regex
+"would" match is how the hypothesis was formed — it cannot also confirm it. A probe executes something and
+returns output that could have said "no": a command, a test, a function call, a query, a request, a browser
+action. The one exception is an existence claim ("X is never called", "the docstring still names Y"), where a
+grep *is* the execution — quote the grep and its output.
+
+### Check the environment first — always
+
+Do this before reviewing any file, whether or not you expect findings. Use the stack fragment's probe from §1
+(`supabase status`, the repo's serve port, its compose file) — the generic forms below are a fallback only:
 
 ```bash
 # Is a dev server / app already running? (port from package.json, Procfile, compose file)
@@ -214,15 +223,38 @@ curl -sf -o /dev/null http://localhost:3000 && echo up || echo down
 docker compose ps 2>/dev/null | head -5
 ```
 
+Record what is up; it goes in the report header (§8).
+
 - App down but startable cheaply → start it; a probe beats an argument.
 - Nothing runnable (no deps installed, no DB, no creds) → review statically, findings ship labelled UNVERIFIED.
 - Don't settle branch behaviour against a shared staging/production environment — it doesn't have this branch yet.
 
+### Exercise the change
+
+Run the changed code path against the live stack at least once, **regardless of findings**. A clean review
+with nothing executed is an unreviewed PR.
+
+- Pure function or filter → run it over real rows pulled from the local DB, on the base ref *and* the head ref
+  (`git archive <base> <dir> | tar -x -C <scratch>` gives you the base without touching the checkout), and diff
+  the outputs.
+- Route → `curl` it on the running server. UI → walk it in Playwright. Migration → apply it locally.
+- If the local data cannot contain the case under test (an empty or synthetic seed with none of the shapes the
+  change targets), the run could never have returned "no" — it is not evidence. Say so, and name the data
+  that would settle it.
+
+### Check the author's verification
+
+When the PR description has a verification section:
+
+- Spot-check the "Checked" items — re-run at least the one that matters most and compare against the stated result.
+- For every "Not checked" item, either probe it or carry it into the report as UNVERIFIED with what it is
+  waiting on. Unchecked claims in the description are where untested risk sits.
+
 ### Prove the finding
 
-Pick the cheapest probe capable of returning "no". §1 carries this repo's real script names and stack-specific
-probe commands — prefer those over the generic forms below. Anything §1 already ran is CONFIRMED
-evidence; quote it rather than re-running it:
+Pick the cheapest probe that is actually a probe (above) and is capable of returning "no". §1 carries this
+repo's real script names and stack-specific probe commands — prefer those over the generic forms below.
+Anything §1 already ran is CONFIRMED evidence; quote it rather than re-running it:
 
 | Claim                                   | Probe                                                                                                                                                          |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -241,7 +273,8 @@ Label every finding before writing anything up:
 - **CONFIRMED** — probe output in hand.
 - **REFUTED** — the probe disagreed with you. Delete it. Don't demote it to a 🟢, don't reword it as a question.
 - **UNVERIFIED** — no probe can settle it (design opinion, readability, scope creep vs the issue) or the stack
-  wasn't runnable. Ships, but labelled, with the reason.
+  wasn't runnable. Ships, but labelled, with the reason. "I read the code" is never the reason: if a command
+  could settle it, run the command.
 
 A pass that probed its findings and refuted none of them almost certainly didn't probe them.
 
@@ -264,6 +297,8 @@ Prioritise by severity, not file order.
 ```
 ## Code Review: [PR title] (#N) — or [branch name] (no PR) when §1 rendered none
 
+Environment: [what was up] · exercised: [the change runs against it, base vs head] · not used: [what, and why]
+
 ### Issue Coverage
 > Linked issues: #X — [title]
 > No PR: "No PR — intent taken from the ticket and branch commits."
@@ -276,6 +311,7 @@ Prioritise by severity, not file order.
 ### Summary
 One paragraph: overall quality, biggest concerns, what's done well.
 Verification: N findings probed, M confirmed, K refuted and dropped, J unverified.
+Author's claims: [checked items re-run and their result] · [not-checked items probed, or carried as unverified].
 
 ### 🔴 Critical Issues
 1. **[Short title]** (`src/path/to/file.ts`, line N)
@@ -302,6 +338,7 @@ Rules:
 - Lead with most severe issue, not first file
 - Every 🔴 and 🟡 carries an `Evidence:` line — the command run and the decisive line of its output, or
   `UNVERIFIED — <reason>` (§7). Never no line at all
+- The `Environment:` line is mandatory. "Not checked" is not an allowed value — §7's first step always runs
 - Say how many findings were refuted by probing; it tells the author how much to trust the rest
 - Every finding gets concrete fix — not just description
 - Large fixes → offer: _"Want me to apply this?"_
